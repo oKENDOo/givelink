@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // 2. ถ้าล็อกอินสำเร็จ ให้ไปหน้าถัดไป (สมมติว่าเป็นหน้า / )
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ!')));
-        // TODO: เปลี่ยน '/' เป็นเส้นทางหน้า Home Screen ของคุณ
+        // TODO: เปลี่ยน '/' เป็นเส้นทางหน้า Home Screen 
         context.go('/home');
       }
     } on FirebaseAuthException catch (e) {
@@ -64,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Image.asset('assets/icons/back_arrow.png', width: 40, height: 40),
+          icon: Image.asset('assets/icons/back_arrow.png', width: 35,height: 35),
           onPressed: () => context.pop(), 
         ),
       ),
@@ -164,5 +164,5 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-//kendokendo142711@gmail.com
-//123456
+//kendokendo14271@gmail.com
+//ict555

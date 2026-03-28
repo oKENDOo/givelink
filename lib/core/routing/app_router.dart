@@ -7,6 +7,7 @@ import '../../features/home/screens/home_screen.dart';
 import '../../features/map/screens/map_screen.dart';
 import '../../features/user/screens/user_screen.dart';
 import '../../features/history/screens/history_screen.dart';
+import '../../features/donation/screens/donation_start_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/', // เริ่มต้นที่หน้า Splash Screen
@@ -44,8 +45,12 @@ final appRouter = GoRouter(
       path: '/history',
       builder: (context, state) => const HistoryScreen(), 
     ),
+    GoRoute(
+      path: '/donation_start',
+      builder: (context, state) => const DonationStartScreen(), 
+    ),
   ],
 );
 
 //kendokendo14271@gmail.com
-//123456
+//ict555

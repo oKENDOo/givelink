@@ -30,11 +30,35 @@ class _UserScreenState extends State<UserScreen> {
     }
   }
 
-  // ฟังก์ชันออกจากระบบ
+  // 🌟 ฟังก์ชันออกจากระบบ (แก้ไขให้มียืนยันและไปหน้า Welcome)
   Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
-    // TODO: ใส่โค้ดนำทางกลับไปหน้า Login ตรงนี้
-    // Navigator.of(context).pushReplacementNamed('/login'); 
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ยืนยันการออกจากระบบ'),
+        content: const Text('คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?'),
+        actions: [
+          // ปุ่มยกเลิก
+          TextButton(
+            onPressed: () => Navigator.pop(context), // ปิดหน้าต่าง Popup
+            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
+          ),
+          // ปุ่มยืนยันออกจากระบบ
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // ปิดหน้าต่าง Popup ก่อน
+              await FirebaseAuth.instance.signOut(); // สั่งออกจากระบบ Firebase
+              
+              if (mounted) {
+                // 🌟 ใช้ context.go เพื่อลบประวัติเก่าทิ้ง ไม่ให้กดย้อนกลับมาได้
+                context.go('/welcome'); 
+              }
+            },
+            child: const Text('ออกจากระบบ', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   // ฟังก์ชันลบบัญชี
@@ -53,10 +77,17 @@ class _UserScreenState extends State<UserScreen> {
             onPressed: () async {
               try {
                 await FirebaseAuth.instance.currentUser?.delete();
-                // TODO: นำทางกลับไปหน้า Login หลังลบสำเร็จ
+                if (mounted) {
+                  context.go('/welcome'); // 🌟 ลบเสร็จให้กลับไปหน้า Welcome เหมือนกัน
+                }
               } catch (e) {
-                // จัดการ Error เช่น ต้อง Login ใหม่ก่อนลบ
                 print("Error deleting account: $e");
+                // ถ้า Error มักจะเกิดจากต้องให้ผู้ใช้ Login ใหม่ก่อนเพื่อความปลอดภัย
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('กรุณาออกจากระบบและเข้าสู่ระบบใหม่อีกครั้งก่อนทำการลบบัญชี')),
+                  );
+                }
               }
             },
             child: const Text('ลบบัญชี', style: TextStyle(color: Colors.red)),
@@ -97,7 +128,7 @@ class _UserScreenState extends State<UserScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.volunteer_activism, color: primaryBlue, size: 18), // เปลี่ยนเป็นโลโก้แอปคุณได้
+                      Icon(Icons.volunteer_activism, color: primaryBlue, size: 18),
                       const SizedBox(width: 8),
                       const Text(
                         'จำนวนการบริจาค 0 ครั้ง',
@@ -121,20 +152,19 @@ class _UserScreenState extends State<UserScreen> {
                       icon: Icons.person,
                       title: 'ข้อมูลส่วนบุคคล',
                       onTap: () {
-                        // TODO: ใส่โค้ดนำทางไปหน้าแก้ไขข้อมูลส่วนบุคคล
                         print('ไปหน้า ข้อมูลส่วนบุคคล');
                       },
                     ),
                     _buildMenuOption(
                       icon: Icons.logout,
                       title: 'ออกจากระบบ',
-                      onTap: _signOut,
+                      onTap: _signOut, // 🌟 เรียกใช้ฟังก์ชันที่แก้ใหม่
                     ),
                     _buildMenuOption(
                       icon: Icons.delete,
                       title: 'ลบบัญชีผู้ใช้',
                       onTap: _deleteAccount,
-                      isDestructive: false, 
+                      isDestructive: true, // ทำให้ไอคอนลบเป็นสีแดงได้ (ปรับให้ตรงกับโค้ดด้านล่าง)
                     ),
                   ],
                 ),
@@ -155,19 +185,23 @@ class _UserScreenState extends State<UserScreen> {
             _buildNavItem(Icons.location_on, 'แผนที่', onTap: () => context.push('/map')),
             
             // ปุ่มเพิ่มตรงกลาง
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+            GestureDetector(
+              onTap: () {
+                context.push('/donation_start');
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.add, color: Colors.black, size: 36),
               ),
-              child: const Icon(Icons.add, color: Colors.black, size: 36),
             ),
             
             _buildNavItem(Icons.history, 'ประวัติ', onTap: () => context.push('/history')),
-            // ตั้งค่า isActive เป็น true สำหรับหน้านี้
             _buildNavItem(Icons.person, 'ผู้ใช้', isActive: true),
           ],
         ),
@@ -175,7 +209,7 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
-  // Widget สำหรับสร้างปุ่มเมนูแต่ละอันให้หน้าตาเหมือนในรูป
+  // Widget สำหรับสร้างปุ่มเมนูแต่ละอัน
   Widget _buildMenuOption({
     required IconData icon, 
     required String title, 
@@ -193,11 +227,11 @@ class _UserScreenState extends State<UserScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 28, color: Colors.black),
+            Icon(icon, size: 28, color: isDestructive ? Colors.red : Colors.black),
             const SizedBox(width: 20),
             Text(
               title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: isDestructive ? Colors.red : Colors.black),
             ),
           ],
         ),
@@ -205,7 +239,7 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
-  // Widget สำหรับ Bottom Nav (ปรับปรุงให้กดได้)
+  // Widget สำหรับ Bottom Nav
   Widget _buildNavItem(IconData icon, String label, {bool isActive = false, VoidCallback? onTap}) {
     return GestureDetector(
       onTap: onTap,

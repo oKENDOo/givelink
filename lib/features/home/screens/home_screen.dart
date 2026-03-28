@@ -129,9 +129,15 @@ class _HomeScreenState extends State<HomeScreen> {
               // --- 1. ส่วนหัว ---
               Row(
                 children: [
-                  const CircleAvatar(
-                    radius: 24,
-                    backgroundImage: NetworkImage('https://cdn-icons-png.flaticon.com/512/3135/3135715.png'),
+                  // 🌟 1. ทำให้รูปโปรไฟล์กดได้ แล้วเด้งไปหน้า User
+                  GestureDetector(
+                    onTap: () {
+                      context.push('/user');
+                    },
+                    child: const CircleAvatar(
+                      radius: 24,
+                      backgroundImage: NetworkImage('https://cdn-icons-png.flaticon.com/512/3135/3135715.png'),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Text(userName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -232,13 +238,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const Text('ค้นหามูลนิธิเพิ่มเติม', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 8),
-                  Icon(Icons.arrow_circle_right_outlined, color: Colors.grey.shade800),
-                ],
+              // 🌟 2. ทำให้ข้อความ "ค้นหามูลนิธิเพิ่มเติม" กดได้ แล้วเด้งไปหน้า Map
+              GestureDetector(
+                onTap: () {
+                  context.push('/map');
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const Text('ค้นหามูลนิธิเพิ่มเติม', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    Icon(Icons.arrow_circle_right_outlined, color: Colors.grey.shade800),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 40),
@@ -295,16 +307,21 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _buildNavItem(Icons.home, 'หน้าหลัก', isActive: true),
             _buildNavItem(Icons.location_on, 'แผนที่', onTap: () => context.push('/map')),
-
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+            
+            GestureDetector(
+              onTap: () {
+                context.push('/donation_start'); // 🌟 กดแล้ววิ่งไปหน้า /donation_start
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.add, color: Colors.black, size: 36),
               ),
-              child: const Icon(Icons.add, color: Colors.black, size: 36),
             ),
 
             _buildNavItem(Icons.history, 'ประวัติ', onTap: () => context.push('/history')),
@@ -360,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-// 🌟 เพิ่ม VoidCallback? onTap
+  // 🌟 เพิ่ม VoidCallback? onTap
   Widget _buildNavItem(IconData icon, String label, {bool isActive = false, VoidCallback? onTap}) {
     return GestureDetector(
       onTap: onTap, // 🌟 สั่งให้ทำงานเวลากด

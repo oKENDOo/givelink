@@ -79,7 +79,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
               _buildNavItem(Icons.home, 'หน้าหลัก', onTap: () => context.push('/home')),
               _buildNavItem(Icons.location_on, 'แผนที่', onTap: () => context.push('/map')),
               
-              Container(
+             GestureDetector(
+              onTap: () {
+                context.push('/donation_start'); // 🌟 กดแล้ววิ่งไปหน้า /donation_start
+              },
+              child: Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 width: 56,
                 height: 56,
@@ -89,6 +93,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
                 child: const Icon(Icons.add, color: Colors.black, size: 36),
               ),
+            ),
               
               // ตั้งค่า isActive เป็น true สำหรับหน้านี้
               _buildNavItem(Icons.history, 'ประวัติ', isActive: true),

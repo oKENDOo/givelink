@@ -72,7 +72,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Image.asset('assets/icons/back_arrow.png', width: 40, height: 40),
+          icon: Image.asset('assets/icons/back_arrow.png', width: 35, height: 35),
           onPressed: () => context.pop(),
         ),
       ),

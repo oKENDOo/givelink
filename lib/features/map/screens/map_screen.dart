@@ -185,12 +185,20 @@ class _MapScreenState extends State<MapScreen> {
             _buildNavItem(Icons.home, 'หน้าหลัก', onTap: () => context.push('/home')),
             _buildNavItem(Icons.location_on, 'แผนที่', isActive: true),
             
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              child: const Icon(Icons.add, color: Colors.black, size: 36),
+            GestureDetector(
+              onTap: () {
+                context.push('/donation_start'); // 🌟 กดแล้ววิ่งไปหน้า /donation_start
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.add, color: Colors.black, size: 36),
+              ),
             ),
             
             _buildNavItem(Icons.history, 'ประวัติ', onTap: () => context.push('/history')),
