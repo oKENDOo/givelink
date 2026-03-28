@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import  '../../widgets/custom_bottom_nav.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -70,38 +71,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ),
 
         // --- ส่วน Bottom Navigation Bar ---
-        bottomNavigationBar: Container(
-          height: 70,
-          color: primaryBlue,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildNavItem(Icons.home, 'หน้าหลัก', onTap: () => context.push('/home')),
-              _buildNavItem(Icons.location_on, 'แผนที่', onTap: () => context.push('/map')),
-              
-             GestureDetector(
-              onTap: () {
-                context.push('/donation_start'); // 🌟 กดแล้ววิ่งไปหน้า /donation_start
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.add, color: Colors.black, size: 36),
-              ),
-            ),
-              
-              // ตั้งค่า isActive เป็น true สำหรับหน้านี้
-              _buildNavItem(Icons.history, 'ประวัติ', isActive: true),
-              
-              _buildNavItem(Icons.person, 'ผู้ใช้', onTap: () => context.push('/user')),
-            ],
-          ),
-        ),
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 3),
       ),
     );
   }
@@ -203,24 +173,4 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // --- Widget สำหรับปุ่มใน Nav Bar ---
-  Widget _buildNavItem(IconData icon, String label, {bool isActive = false,  VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? Colors.white : Colors.black87, size: 28),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.black87,
-              fontSize: 12,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

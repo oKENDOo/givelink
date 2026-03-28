@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart'; // 🌟 1. นำเข้า Geolocator
+import  '../../widgets/custom_bottom_nav.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -176,49 +177,7 @@ class _MapScreenState extends State<MapScreen> {
       ),
 
       // แถบเมนูด้านล่างสุด
-      bottomNavigationBar: Container(
-        height: 70,
-        color: primaryBlue,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildNavItem(Icons.home, 'หน้าหลัก', onTap: () => context.push('/home')),
-            _buildNavItem(Icons.location_on, 'แผนที่', isActive: true),
-            
-            GestureDetector(
-              onTap: () {
-                context.push('/donation_start'); // 🌟 กดแล้ววิ่งไปหน้า /donation_start
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.add, color: Colors.black, size: 36),
-              ),
-            ),
-            
-            _buildNavItem(Icons.history, 'ประวัติ', onTap: () => context.push('/history')),
-            _buildNavItem(Icons.person, 'ผู้ใช้', onTap: () => context.push('/user')),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, {bool isActive = false, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? Colors.white : Colors.black87, size: 28),
-          Text(label, style: TextStyle(color: isActive ? Colors.white : Colors.black87, fontSize: 12, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
-        ],
-      ),
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 1),
     );
   }
 }

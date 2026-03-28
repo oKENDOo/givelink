@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import  '../../widgets/custom_bottom_nav.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -175,37 +176,7 @@ class _UserScreenState extends State<UserScreen> {
       ),
 
       // --- 3. ส่วน Bottom Navigation Bar ---
-      bottomNavigationBar: Container(
-        height: 70,
-        color: primaryBlue,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildNavItem(Icons.home, 'หน้าหลัก', onTap: () => context.push('/home')),
-            _buildNavItem(Icons.location_on, 'แผนที่', onTap: () => context.push('/map')),
-            
-            // ปุ่มเพิ่มตรงกลาง
-            GestureDetector(
-              onTap: () {
-                context.push('/donation_start');
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.add, color: Colors.black, size: 36),
-              ),
-            ),
-            
-            _buildNavItem(Icons.history, 'ประวัติ', onTap: () => context.push('/history')),
-            _buildNavItem(Icons.person, 'ผู้ใช้', isActive: true),
-          ],
-        ),
-      ),
+    bottomNavigationBar: const CustomBottomNav(currentIndex: 4),
     );
   }
 
@@ -235,27 +206,6 @@ class _UserScreenState extends State<UserScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Widget สำหรับ Bottom Nav
-  Widget _buildNavItem(IconData icon, String label, {bool isActive = false, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? Colors.white : Colors.black87, size: 28),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.black87,
-              fontSize: 12,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
       ),
     );
   }

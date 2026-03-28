@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'news_detail_screen.dart'; // 🌟 นำเข้าหน้าข่าวสาร
 import 'package:go_router/go_router.dart';
+import  '../../widgets/custom_bottom_nav.dart';
 
 class BannerItem {
   final String categoryTitle;
@@ -299,36 +300,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      bottomNavigationBar: Container(
-        height: 70,
-        color: primaryBlue,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildNavItem(Icons.home, 'หน้าหลัก', isActive: true),
-            _buildNavItem(Icons.location_on, 'แผนที่', onTap: () => context.push('/map')),
-            
-            GestureDetector(
-              onTap: () {
-                context.push('/donation_start'); // 🌟 กดแล้ววิ่งไปหน้า /donation_start
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.add, color: Colors.black, size: 36),
-              ),
-            ),
-
-            _buildNavItem(Icons.history, 'ประวัติ', onTap: () => context.push('/history')),
-            _buildNavItem(Icons.person, 'ผู้ใช้', onTap: () => context.push('/user')),
-          ],
-        ),
-      ),
+    bottomNavigationBar: const CustomBottomNav(currentIndex: 0),
     );
   }
 
@@ -374,20 +346,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  // 🌟 เพิ่ม VoidCallback? onTap
-  Widget _buildNavItem(IconData icon, String label, {bool isActive = false, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap, // 🌟 สั่งให้ทำงานเวลากด
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? Colors.white : Colors.black87, size: 28),
-          Text(label, style: TextStyle(color: isActive ? Colors.white : Colors.black87, fontSize: 12, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
-        ],
-      ),
     );
   }
 }

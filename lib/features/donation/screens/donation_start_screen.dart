@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart'; // 🌟 นำเข้า go_router สำหรับการเปลี่ยนหน้า
 import 'package:flutter/material.dart';
+import  '../../widgets/custom_bottom_nav.dart';
 
 class DonationStartScreen extends StatelessWidget {
   const DonationStartScreen({Key? key}) : super(key: key);
@@ -77,56 +78,7 @@ class DonationStartScreen extends StatelessWidget {
       ),
 
       // 4. Navigation Bar ด้านล่าง (ปรับให้เหมือน user_screen.dart)
-      bottomNavigationBar: Container(
-        height: 70, // 🌟 ปรับความสูงเป็น 70 เหมือนหน้า user_screen
-        color: primaryTeal,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildNavItem(Icons.home, 'หน้าหลัก', onTap: () => context.push('/home')),
-            _buildNavItem(Icons.location_on, 'แผนที่', onTap: () => context.push('/map')),
-            
-            // ปุ่มเพิ่มตรงกลาง (เนื่องจากอยู่หน้านี้แล้ว เลยไม่ต้องใส่ context.push)
-             
-              Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.add, color: Colors.black, size: 36),
-              ),
-            
-            
-            _buildNavItem(Icons.history, 'ประวัติ', onTap: () => context.push('/history')),
-            // 🌟 เปลี่ยน isActive เป็น false และใส่ onTap เพื่อให้กดกลับไปหน้าผู้ใช้ได้
-            _buildNavItem(Icons.person, 'ผู้ใช้', onTap: () => context.push('/user')),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Widget สำหรับ Bottom Nav (เหมือนของ user_screen.dart)
-  Widget _buildNavItem(IconData icon, String label, {bool isActive = false, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? Colors.white : Colors.black87, size: 28),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.black87,
-              fontSize: 12,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
+    bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
 }
