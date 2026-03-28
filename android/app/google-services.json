@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "813850872717",
+    "project_id": "givelink-3393b",
+    "storage_bucket": "givelink-3393b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:813850872717:android:34e807b6af2c9adcfbcbc4",
+        "android_client_info": {
+          "package_name": "com.example.givelink"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBis1WFjX6ZDMwD_kBrzAr91A-dL60SJB8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
