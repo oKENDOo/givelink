@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 80),
+          const SizedBox(height: 35),
           Expanded( 
             child: Container(
               width: double.infinity,

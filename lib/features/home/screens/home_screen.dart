@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'news_detail_screen.dart'; // 🌟 นำเข้าหน้าข่าวสาร
+import 'package:go_router/go_router.dart';
 
 class BannerItem {
   final String categoryTitle;
@@ -139,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              Text('สวัสดี $userName มาทำความดีกันเถอะ !', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text('สวัสดี $userName มาทำความดีกันเถอะ !', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
 
               const SizedBox(height: 20),
 
@@ -170,7 +171,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Expanded(
                     child: SizedBox(
-                      height: 160,
+                      height: 170,
+                      width: 100,
                       child: PageView.builder(
                         controller: _pageController,
                         itemCount: bannerData.length,
@@ -292,7 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _buildNavItem(Icons.home, 'หน้าหลัก', isActive: true),
-            _buildNavItem(Icons.location_on, 'แผนที่'),
+            _buildNavItem(Icons.location_on, 'แผนที่', onTap: () => context.push('/map')),
 
             Container(
               margin: const EdgeInsets.only(bottom: 8),
@@ -305,8 +307,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Icon(Icons.add, color: Colors.black, size: 36),
             ),
 
-            _buildNavItem(Icons.history, 'ประวัติ'),
-            _buildNavItem(Icons.person, 'ผู้ใช้'),
+            _buildNavItem(Icons.history, 'ประวัติ', onTap: () => context.push('/history')),
+            _buildNavItem(Icons.person, 'ผู้ใช้', onTap: () => context.push('/user')),
           ],
         ),
       ),
@@ -358,20 +360,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, {bool isActive = false}) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: isActive ? Colors.white : Colors.black87, size: 28),
-        Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.black87,
-            fontSize: 12,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ],
+// 🌟 เพิ่ม VoidCallback? onTap
+  Widget _buildNavItem(IconData icon, String label, {bool isActive = false, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap, // 🌟 สั่งให้ทำงานเวลากด
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: isActive ? Colors.white : Colors.black87, size: 28),
+          Text(label, style: TextStyle(color: isActive ? Colors.white : Colors.black87, fontSize: 12, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
+        ],
+      ),
     );
   }
 }

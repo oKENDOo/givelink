@@ -90,7 +90,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 40), 
+          const SizedBox(height: 35), 
           Expanded( 
             child: Container(
               width: double.infinity,
@@ -105,11 +105,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     // 🌟 ลบช่องกรอก "ชื่อ" ออกไปแล้ว ให้เริ่มที่ "ชื่อผู้ใช้" เลย
                     _buildTextField(hint: 'ชื่อผู้ใช้', controller: _usernameController),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 20),
                     _buildTextField(hint: 'อีเมล', controller: _emailController),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 20),
                     _buildTextField(hint: 'รหัสผ่าน', isPassword: true, controller: _passwordController),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 20),
                     _buildTextField(hint: 'ยืนยันรหัสผ่าน', isPassword: true, controller: _confirmPasswordController),
                     
                     const SizedBox(height: 50), 
