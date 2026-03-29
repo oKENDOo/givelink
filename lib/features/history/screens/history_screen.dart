@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import  '../../widgets/custom_bottom_nav.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -69,9 +67,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
             _buildEmptyState('คุณยังไม่มีการบริจาคที่ถูกยกเลิก/ล้มเหลวในตอนนี้'),
           ],
         ),
-
-        // --- ส่วน Bottom Navigation Bar ---
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 3),
       ),
     );
   }

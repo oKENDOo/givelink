@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../widgets/custom_bottom_nav.dart';
 
 class DonationSuccessScreen extends StatelessWidget {
   const DonationSuccessScreen({super.key});
@@ -76,7 +75,6 @@ class DonationSuccessScreen extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart'; 
-import '../../widgets/custom_bottom_nav.dart';
 
 class DonationFoundationDetailScreen extends StatelessWidget {
   final Map<String, dynamic> foundationData;
@@ -265,7 +264,6 @@ class DonationFoundationDetailScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../../widgets/custom_bottom_nav.dart';
 
 class DonationDateScreen extends StatefulWidget {
   final String foundationName;
@@ -252,7 +251,6 @@ class _DonationDateScreenState extends State<DonationDateScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
 }

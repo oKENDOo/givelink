@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart'; 
 import 'news_detail_screen.dart'; 
 import 'package:go_router/go_router.dart';
-import '../../widgets/custom_bottom_nav.dart';
 
 class BannerItem {
   final String categoryTitle;
@@ -202,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              Text('สวัสดี $userName มาทำความดีกันเถอะ !', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('สวัสดี $userName มาทำความดีกันเถอะ !', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
 
               const SizedBox(height: 20),
 
@@ -265,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 30),
 
-              const Text('มูลนิธิใกล้ฉัน', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text('มูลนิธิใกล้ฉัน', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
 
               StreamBuilder<QuerySnapshot>(
@@ -421,9 +420,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    const Text('ค้นหามูลนิธิเพิ่มเติม', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('ค้นหามูลนิธิเพิ่มเติม', style: TextStyle(fontWeight: FontWeight.bold,)),
                     const SizedBox(width: 8),
-                    Icon(Icons.arrow_circle_right_outlined, color: Colors.grey.shade800),
+                    Icon(Icons.arrow_circle_right_outlined, color: primaryBlue),
                   ],
                 ),
               ),
@@ -472,7 +471,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 0),
     );
   }
 }

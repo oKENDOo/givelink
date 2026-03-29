@@ -4,7 +4,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart'; 
-import '../../widgets/custom_bottom_nav.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -290,7 +289,6 @@ class _MapScreenState extends State<MapScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 1),
     );
   }
 }

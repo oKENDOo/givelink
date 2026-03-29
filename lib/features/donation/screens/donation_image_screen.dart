@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart'; // 🌟 ใช้สำหรับเลือกรูป
-import '../../widgets/custom_bottom_nav.dart';
 
 class DonationImageScreen extends StatefulWidget {
   final String foundationName;
@@ -317,7 +316,6 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
 }

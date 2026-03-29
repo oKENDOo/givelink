@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-// 🌟 ตรวจสอบ Path ของ CustomBottomNav ให้ตรงกับโปรเจกต์ของคุณ
-import '../../widgets/custom_bottom_nav.dart'; 
 
 class DonationSelectionScreen extends StatefulWidget {
   const DonationSelectionScreen({super.key});
@@ -231,9 +229,6 @@ class _DonationSelectionScreenState extends State<DonationSelectionScreen> {
           ],
         ),
       ),
-      
-      // Navbar ใช้ CustomBottomNav ตัวเดิม
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
 }

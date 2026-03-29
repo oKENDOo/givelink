@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart'; 
-import '../../widgets/custom_bottom_nav.dart';
 
 class DonationFoundationScreen extends StatefulWidget {
   final List<String> selectedCategories;
@@ -340,7 +339,6 @@ class _DonationFoundationScreenState extends State<DonationFoundationScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
 }

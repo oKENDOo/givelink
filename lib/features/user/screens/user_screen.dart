@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
-import  '../../widgets/custom_bottom_nav.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -175,9 +174,6 @@ class _UserScreenState extends State<UserScreen> {
           ],
         ),
       ),
-
-      // --- 3. ส่วน Bottom Navigation Bar ---
-    bottomNavigationBar: const CustomBottomNav(currentIndex: 4),
     );
   }
 

@@ -1,6 +1,5 @@
 import 'package:go_router/go_router.dart'; // 🌟 นำเข้า go_router สำหรับการเปลี่ยนหน้า
 import 'package:flutter/material.dart';
-import  '../../widgets/custom_bottom_nav.dart';
 
 class DonationStartScreen extends StatelessWidget {
   const DonationStartScreen({Key? key}) : super(key: key);
@@ -78,9 +77,6 @@ class DonationStartScreen extends StatelessWidget {
           ),
         ),
       ),
-
-      // 4. Navigation Bar ด้านล่าง (ปรับให้เหมือน user_screen.dart)
-    bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
 }
