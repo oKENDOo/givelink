@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'news_detail_screen.dart'; // 🌟 นำเข้าหน้าข่าวสาร
 import 'package:go_router/go_router.dart';
-import  '../../widgets/custom_bottom_nav.dart';
+import '../../widgets/custom_bottom_nav.dart';
 
 class BannerItem {
   final String categoryTitle;
@@ -31,6 +31,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final Color primaryBlue = const Color(0xFF64B5C7);
   String userName = 'ผู้ใช้งาน';
+  String? photoUrl; // 🌟 เพิ่มตัวแปรสำหรับเก็บลิงก์รูปโปรไฟล์
 
   late PageController _pageController;
   int _currentPage = 0;
@@ -83,6 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // 🌟 อัปเดตฟังก์ชันดึงข้อมูล ให้ดึงรูปภาพ (photoURL) มาด้วย
   void _loadUserData() {
     final user = FirebaseAuth.instance.currentUser;
     user?.reload().then((_) {
@@ -90,6 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (updatedUser != null && mounted) {
         setState(() {
           userName = updatedUser.displayName ?? updatedUser.email?.split('@')[0] ?? 'ผู้ใช้งาน';
+          photoUrl = updatedUser.photoURL; // ดึงลิงก์รูปล่าสุดมาใส่ตัวแปร
         });
       }
     });
@@ -130,14 +133,33 @@ class _HomeScreenState extends State<HomeScreen> {
               // --- 1. ส่วนหัว ---
               Row(
                 children: [
-                  // 🌟 1. ทำให้รูปโปรไฟล์กดได้ แล้วเด้งไปหน้า User
+                  // 🌟 1. ทำให้รูปโปรไฟล์กดได้ แล้วเด้งไปหน้า User และใช้รูปจาก Firebase
                   GestureDetector(
                     onTap: () {
                       context.push('/user');
                     },
-                    child: const CircleAvatar(
-                      radius: 24,
-                      backgroundImage: NetworkImage('https://cdn-icons-png.flaticon.com/512/3135/3135715.png'),
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        shape: BoxShape.circle,
+                      ),
+                      child: ClipOval(
+                        child: (photoUrl != null && photoUrl!.isNotEmpty)
+                            ? Image.network(
+                                photoUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.person, size: 30, color: Colors.grey),
+                              )
+                            : Image.network(
+                                'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.person, size: 30, color: Colors.grey),
+                              ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),

@@ -199,7 +199,7 @@ class DonationSummaryScreen extends StatelessWidget {
                             child: Image.file(
                               selectedImages[index] as File,
                               width: double.infinity,
-                              height: 200,
+                              height: 300,
                               fit: BoxFit.cover,
                             ),
                           ),

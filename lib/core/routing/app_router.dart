@@ -15,6 +15,7 @@ import '../../features/donation/screens/donation_date_screen.dart';
 import '../../features/donation/screens/donation_image_screen.dart';
 import '../../features/donation/screens/donation_summary_screen.dart';
 import '../../features/donation/screens/donation_success_screen.dart';
+import '../../features/user/screens/user_edit_info_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/', // เริ่มต้นที่หน้า Splash Screen
@@ -119,6 +120,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/donation_success',
       builder: (context, state) => const DonationSuccessScreen(),
+    ),
+    GoRoute(
+      path: '/user_edit',
+      builder: (context, state) => const UserEditInfoScreen(),
     ),
   ],
 );

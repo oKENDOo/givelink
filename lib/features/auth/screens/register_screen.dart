@@ -103,8 +103,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40), 
                 child: Column(
                   children: [
-                    // 🌟 ลบช่องกรอก "ชื่อ" ออกไปแล้ว ให้เริ่มที่ "ชื่อผู้ใช้" เลย
-                    _buildTextField(hint: 'ชื่อผู้ใช้', controller: _usernameController),
+                    _buildTextField(hint: 'ชื่อผู้ใช้', controller: _usernameController, maxLength: 12),
                     const SizedBox(height: 20),
                     _buildTextField(hint: 'อีเมล', controller: _emailController),
                     const SizedBox(height: 20),
@@ -139,14 +138,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextField({required String hint, bool isPassword = false, required TextEditingController controller}) {
+// 🌟 เพิ่ม int? maxLength เข้ามารับค่า
+  Widget _buildTextField({required String hint, bool isPassword = false, required TextEditingController controller, int? maxLength}) {
     return TextFormField(
       controller: controller,
       obscureText: isPassword,
+      maxLength: maxLength, // 🌟 จำกัดความยาว
       decoration: InputDecoration(
         hintText: hint,
         filled: true,
         fillColor: Colors.white,
+        counterText: '', // 🌟 ซ่อนตัวเลข 0/12 ด้านล่าง เพื่อความสวยงาม
         contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30), 
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(50),
@@ -156,3 +158,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+
+//firebase (Email+Username+Password)+ ImgBB(Proflie Pic)
+//รหัสประจำตัวผู้ใช้ (UID) //รหัสผ่าน (Password)// user.email // user.displayName // user.photoURL 

@@ -149,7 +149,7 @@ class _DonationSelectionScreenState extends State<DonationSelectionScreen> {
                       },
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 20),
 
                     // ส่วนกรอกข้อความ "อื่นๆ"
                     const Text(
@@ -178,7 +178,7 @@ class _DonationSelectionScreenState extends State<DonationSelectionScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
 
                     // ปุ่มขั้นตอนต่อไป
                     SizedBox(

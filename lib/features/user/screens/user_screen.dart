@@ -153,7 +153,8 @@ class _UserScreenState extends State<UserScreen> {
                       icon: Icons.person,
                       title: 'ข้อมูลส่วนบุคคล',
                       onTap: () {
-                        print('ไปหน้า ข้อมูลส่วนบุคคล');
+                        // 🌟 กดแล้วพาไปหน้าแก้ไขข้อมูล
+                        context.push('/user_edit');
                       },
                     ),
                     _buildMenuOption(
