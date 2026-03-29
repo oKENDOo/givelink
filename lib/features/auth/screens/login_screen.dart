@@ -16,27 +16,48 @@ class _LoginScreenState extends State<LoginScreen> {
   
   bool _isLoading = false;
 
-  // 🌟 ฟังก์ชันเข้าสู่ระบบ
+// 🌟 ฟังก์ชันเข้าสู่ระบบ (อัปเดตระบบดักจับ Error แล้ว)
   Future<void> _signIn() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // --- ด่านที่ 1: เช็คว่ากรอกข้อมูลครบไหม ---
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วน')),
+      );
+      return; // หยุดการทำงาน ไม่ต้องไปเรียก Firebase
+    }
+
     setState(() => _isLoading = true);
 
     try {
       // 1. ส่งอีเมลและรหัสผ่านไปเช็กกับ Firebase
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+        email: email,
+        password: password,
       );
       
-      // 2. ถ้าล็อกอินสำเร็จ ให้ไปหน้าถัดไป (สมมติว่าเป็นหน้า / )
+      // 2. ถ้าล็อกอินสำเร็จ ให้ไปหน้าถัดไป
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ!')));
-        // TODO: เปลี่ยน '/' เป็นเส้นทางหน้า Home Screen 
         context.go('/home');
       }
     } on FirebaseAuthException catch (e) {
-      // 3. ดักจับ Error เช่น รหัสผิด ไม่มีบัญชีนี้
+      // --- ด่านที่ 2: ดัก Error จาก Firebase แล้วแปลเป็นไทย ---
+      String errorMessage = 'เข้าสู่ระบบล้มเหลว กรุณาลองใหม่อีกครั้ง';
+      
+      if (e.code == 'invalid-email') {
+        errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง (เช่น ลืมใส่ @ หรือสะกดผิด)';
+      } else if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        // ปัจจุบัน Firebase จะรวบ error รหัสผิด/ไม่มีเมล เป็น invalid-credential เพื่อความปลอดภัยครับ
+        errorMessage = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+      } else if (e.code == 'too-many-requests') {
+        errorMessage = 'เข้าสู่ระบบผิดพลาดหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่';
+      }
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('เข้าสู่ระบบล้มเหลว: ${e.message}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

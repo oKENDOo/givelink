@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import '../../widgets/custom_bottom_nav.dart';
 
+
 class UserEditInfoScreen extends StatefulWidget {
   const UserEditInfoScreen({super.key});
 
@@ -151,11 +152,12 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> {
     );
   }
 
-  void _showEditBottomSheet({
+void _showEditBottomSheet({
     required String title,
     required String currentValue,
     required bool isPassword,
     required Function(String) onSave,
+    int? maxLength, // 🌟 1. เพิ่มตัวรับค่า maxLength เข้ามา
   }) {
     final TextEditingController controller = TextEditingController(text: isPassword ? '' : currentValue);
 
@@ -186,7 +188,9 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> {
               TextField(
                 controller: controller,
                 obscureText: isPassword,
+                maxLength: maxLength, // 🌟 2. ใส่ maxLength ให้ TextField
                 decoration: InputDecoration(
+                  counterText: '', // 🌟 3. ซ่อนตัวเลข 0/12 เพื่อความสวยงาม
                   filled: true,
                   fillColor: Colors.white,
                   hintText: isPassword ? 'ป้อนรหัสผ่านใหม่' : '',
@@ -337,6 +341,7 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> {
                         currentValue: userName, 
                         isPassword: false, 
                         onSave: _updateName,
+                        maxLength: 12,
                       );
                     }),
                     const Divider(height: 1, indent: 16, endIndent: 16),

@@ -1,14 +1,16 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:geolocator/geolocator.dart'; 
 import '../../widgets/custom_bottom_nav.dart';
 
-class DonationSummaryScreen extends StatelessWidget {
+class DonationSummaryScreen extends StatefulWidget {
   final String foundationName;
   final List<dynamic> selectedCategories;
   final String othersText;
   final DateTime? selectedDate;
-  final List<dynamic> selectedImages; // รับรูปภาพมาเป็น List<File>
+  final List<dynamic> selectedImages;
 
   const DonationSummaryScreen({
     super.key,
@@ -19,9 +21,69 @@ class DonationSummaryScreen extends StatelessWidget {
     required this.selectedImages,
   });
 
+  @override
+  State<DonationSummaryScreen> createState() => _DonationSummaryScreenState();
+}
+
+class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
   final Color primaryTeal = const Color(0xFF64B5C7);
 
-  // ฟังก์ชันแปลงชื่อหมวดหมู่กลับเป็น Icon
+  Map<String, dynamic>? foundationData;
+  String calculatedDistance = 'กำลังคำนวณ...';
+  bool isLoadingFoundation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFoundationData(); 
+  }
+
+  Future<void> _fetchFoundationData() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('Foundations')
+          .where('name', isEqualTo: widget.foundationName)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        foundationData = snapshot.docs.first.data();
+      }
+
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (serviceEnabled && permission != LocationPermission.denied && permission != LocationPermission.deniedForever) {
+        Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        
+        if (foundationData != null && foundationData!['location'] != null) {
+          GeoPoint geoPoint = foundationData!['location'];
+          double distInMeters = Geolocator.distanceBetween(
+            position.latitude, position.longitude,
+            geoPoint.latitude, geoPoint.longitude,
+          );
+          calculatedDistance = '${(distInMeters / 1000).toStringAsFixed(1)} Km';
+        } else {
+          calculatedDistance = 'ไม่ทราบระยะทาง';
+        }
+      } else {
+        calculatedDistance = 'ไม่สามารถระบุระยะทางได้';
+      }
+    } catch (e) {
+      debugPrint('Error fetching data: $e');
+      calculatedDistance = 'ข้อผิดพลาดในการคำนวณ';
+    }
+
+    if (mounted) {
+      setState(() {
+        isLoadingFoundation = false;
+      });
+    }
+  }
+
   IconData _getIconForCategory(String title) {
     switch (title) {
       case 'เสื้อผ้า': return Icons.checkroom;
@@ -40,7 +102,6 @@ class DonationSummaryScreen extends StatelessWidget {
     }
   }
 
-  // ฟังก์ชันแปลงวันที่เป็นภาษาไทย
   String _formatThaiDate(DateTime? date) {
     if (date == null) return '';
     final List<String> thaiMonths = [
@@ -51,11 +112,9 @@ class DonationSummaryScreen extends StatelessWidget {
     return '${date.day} ${thaiMonths[date.month - 1]} $buddhistYear';
   }
 
-  // 🌟 ฟังก์ชันสร้างข้อความสรุปหมวดหมู่ (ใช้ "และ" แค่คำสุดท้าย)
   String _buildCategoriesString() {
-    // เอาหมวดหมู่และช่องอื่นๆ มารวมกัน
-    List<String> items = [...selectedCategories, if (othersText.isNotEmpty) othersText]
-        .map((item) => item.toString().replaceAll('\n', '')) // เอา \n ออกให้หมดเพื่อให้อยู่บรรทัดเดียวกัน
+    List<String> items = [...widget.selectedCategories, if (widget.othersText.isNotEmpty) widget.othersText]
+        .map((item) => item.toString().replaceAll('\n', ''))
         .toList();
     
     int n = items.length;
@@ -63,16 +122,14 @@ class DonationSummaryScreen extends StatelessWidget {
     if (n == 1) return items[0];
     if (n == 2) return '${items[0]} และ ${items[1]}';
     
-    // ถ้ามี 3 อย่างขึ้นไป ให้คั่นด้วยลูกน้ำ แล้วใช้ และ ก่อนคำสุดท้าย
     String firstPart = items.sublist(0, n - 1).join(', ');
     return '$firstPart และ ${items[n - 1]}';
   }
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 คำนวณการแสดงผลไอคอน (แสดงสูงสุด 3 อัน ถ้าเกินให้โชว์ +X)
-    int displayCount = selectedCategories.length > 3 ? 3 : selectedCategories.length;
-    int overflowCount = selectedCategories.length > 3 ? selectedCategories.length - 3 : 0;
+    int displayCount = widget.selectedCategories.length > 3 ? 3 : widget.selectedCategories.length;
+    int overflowCount = widget.selectedCategories.length > 3 ? widget.selectedCategories.length - 3 : 0;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -95,24 +152,21 @@ class DonationSummaryScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- 1. หัวข้อ ---
                     const Center(
                       child: Text('ตรวจสอบข้อมูลให้ถูกต้อง', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(height: 20),
 
-                    // --- 2. สิ่งของที่จะบริจาค ---
                     Center(child: Text('สิ่งของที่จะบริจาค', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryTeal))),
                     const SizedBox(height: 10),
                     
-                    // 🌟 แถวโชว์ไอคอน (จำกัด 3 อัน พร้อม +X)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         ...List.generate(displayCount, (index) {
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: Icon(_getIconForCategory(selectedCategories[index].toString()), color: primaryTeal, size: 45),
+                            child: Icon(_getIconForCategory(widget.selectedCategories[index].toString()), color: primaryTeal, size: 45),
                           );
                         }),
                         if (overflowCount > 0)
@@ -134,70 +188,40 @@ class DonationSummaryScreen extends StatelessWidget {
                     ),
                     const Divider(height: 30, thickness: 1),
 
-                    // --- 3. บริจาคให้กับ (จำลองข้อมูลจากชื่อที่ส่งมา) ---
                     Text('บริจาคให้กับ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryTeal)),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Container(
-                          width: 80, height: 80,
-                          decoration: BoxDecoration(color: Colors.yellowAccent.shade700, borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.people_alt, size: 40),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(child: Text(foundationName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                  const Icon(Icons.check_circle, color: Colors.blue, size: 18),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              const Text('อาหารและน้ำ/ของเล่นเด็ก/หนังสือ/เสื้อผ้า\n1.5 Km (10 นาที)', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: const [
-                                  Icon(Icons.fastfood, color: Color(0xFF64B5C7), size: 18), SizedBox(width: 4),
-                                  Icon(Icons.smart_toy, color: Color(0xFF64B5C7), size: 18), SizedBox(width: 4),
-                                  Icon(Icons.menu_book, color: Color(0xFF64B5C7), size: 18), SizedBox(width: 4),
-                                  Icon(Icons.checkroom, color: Color(0xFF64B5C7), size: 18),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                    
+                    isLoadingFoundation 
+                      ? const Center(child: CircularProgressIndicator()) 
+                      : foundationData == null 
+                        ? Center(child: Text('ไม่พบข้อมูลของ ${widget.foundationName} ในระบบ', style: const TextStyle(color: Colors.red)))
+                        : _buildFoundationCard(), 
+
                     const Divider(height: 30, thickness: 1),
 
-                    // --- 4. ในวันที่ ---
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('ในวันที่', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryTeal)),
                         const SizedBox(width: 20),
-                        Expanded(child: Text(_formatThaiDate(selectedDate), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+                        Expanded(child: Text(_formatThaiDate(widget.selectedDate), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
                       ],
                     ),
                     const Divider(height: 30, thickness: 1),
 
-                    // --- 5. รูปภาพสิ่งของ ---
                     Text('รูปภาพสิ่งของ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryTeal)),
                     const SizedBox(height: 16),
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: selectedImages.length,
+                      itemCount: widget.selectedImages.length,
                       itemBuilder: (context, index) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16.0),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: Image.file(
-                              selectedImages[index] as File,
+                              widget.selectedImages[index] as File,
                               width: double.infinity,
                               height: 300,
                               fit: BoxFit.cover,
@@ -208,13 +232,11 @@ class DonationSummaryScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 40),
 
-                    // --- 6. ปุ่มยืนยันข้อมูล ---
                     SizedBox(
                       width: double.infinity,
                       height: 65,
                       child: ElevatedButton(
                         onPressed: () {
-                          // 🌟 กดแล้วไปหน้าความสำเร็จ
                           context.push('/donation_success');
                         },
                         style: ElevatedButton.styleFrom(
@@ -241,6 +263,84 @@ class DonationSummaryScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
+    );
+  }
+
+  Widget _buildFoundationCard() {
+    Color logoColor = Colors.grey.shade200;
+    if (foundationData!['logoColor'] != null) {
+      try {
+        String hexStr = foundationData!['logoColor'].toString().replaceAll('0x', '').replaceAll('#', '');
+        if (hexStr.length == 6) hexStr = 'FF$hexStr';
+        logoColor = Color(int.parse(hexStr, radix: 16));
+      } catch (e) {}
+    }
+    String? logoImage = foundationData!['logoImage'];
+
+    List<String> itemsList = List<String>.from(foundationData!['neededItems'] ?? []);
+    String acceptedItemsText = itemsList.join('/');
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 80, height: 80,
+          decoration: BoxDecoration(
+            color: logoImage != null ? Colors.white : logoColor,
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+            image: logoImage != null 
+                ? DecorationImage(image: NetworkImage(logoImage), fit: BoxFit.contain)
+                : null,
+          ),
+          child: logoImage == null
+              ? const Center(child: Icon(Icons.volunteer_activism, size: 40, color: Colors.black87))
+              : null,
+        ),
+        const SizedBox(width: 16),
+        
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 🌟 ปรับให้ติ๊กถูกติดกับชื่อ
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      foundationData!['name'] ?? widget.foundationName, 
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), 
+                      maxLines: 1, 
+                      overflow: TextOverflow.ellipsis
+                    ),
+                  ),
+                  if (foundationData!['isVerified'] == true) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.verified, color: Colors.blue, size: 18),
+                  ]
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$acceptedItemsText\n$calculatedDistance', 
+                style: const TextStyle(color: Colors.grey, fontSize: 12), 
+                maxLines: 2, 
+                overflow: TextOverflow.ellipsis
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: itemsList.take(4).map((itemTitle) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6.0),
+                    child: Icon(_getIconForCategory(itemTitle), color: primaryTeal, size: 18),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

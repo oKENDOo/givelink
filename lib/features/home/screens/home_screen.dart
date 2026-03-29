@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'news_detail_screen.dart'; // 🌟 นำเข้าหน้าข่าวสาร
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:geolocator/geolocator.dart'; 
+import 'news_detail_screen.dart'; 
 import 'package:go_router/go_router.dart';
 import '../../widgets/custom_bottom_nav.dart';
 
@@ -10,7 +12,7 @@ class BannerItem {
   final String foundationName;
   final String imageUrl;
   final Color fallbackColor;
-  final String content; // เนื้อหาข่าว
+  final String content; 
 
   BannerItem({
     required this.categoryTitle,
@@ -31,12 +33,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final Color primaryBlue = const Color(0xFF64B5C7);
   String userName = 'ผู้ใช้งาน';
-  String? photoUrl; // 🌟 เพิ่มตัวแปรสำหรับเก็บลิงก์รูปโปรไฟล์
+  String? photoUrl; 
 
   late PageController _pageController;
   int _currentPage = 0;
+  
+  Position? _currentPosition;
 
-  // 🌟 ข้อมูล Banner พร้อมเนื้อหาข่าว 3 แบบ
   final List<BannerItem> bannerData = [
     BannerItem(
       categoryTitle: 'สนับสนุนเครื่องมือแพทย์',
@@ -48,14 +51,14 @@ class _HomeScreenState extends State<HomeScreen> {
     BannerItem(
       categoryTitle: 'ช่วยเหลือเด็กด้อยโอกาส',
       foundationName: 'มูลนิธิเด็กวิลล่า',
-      imageUrl: 'https://via.placeholder.com/600x400/7f7fff/ffffff?text=Children+Foundation',
+      imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
       fallbackColor: Colors.blue.shade100,
       content: 'เด็กๆ ในพื้นที่ห่างไกลยังขาดอุปกรณ์การเรียนและสารอาหารที่จำเป็น... โครงการนี้มีเป้าหมายเพื่อมอบทุนการศึกษาและมื้ออาหารกลางวันที่ถูกสุขลักษณะให้กับเด็กกว่า 500 คน การสนับสนุนเพียงเล็กน้อยของคุณสามารถเปลี่ยนอนาคตของเด็กหนึ่งคนให้ดีขึ้นได้อย่างยั่งยืน',
     ),
     BannerItem(
       categoryTitle: 'อนุรักษ์สิ่งแวดล้อม',
       foundationName: 'กองทุนสัตว์ป่าโลก (WWF)',
-      imageUrl: 'https://via.placeholder.com/600x400/7fff7f/333333?text=WWF+Thailand',
+      imageUrl: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
       fallbackColor: Colors.green.shade100,
       content: 'วิกฤตภาวะโลกร้อนส่งผลกระทบต่อถิ่นที่อยู่อาศัยของสัตว์ป่าไทยอย่างรุนแรง... เรามุ่งเน้นการฟื้นฟูป่าต้นน้ำและการเฝ้าระวังการล่าสัตว์ป่าผิดกฎหมาย เงินสนับสนุนจะถูกนำไปใช้ในโครงการฟื้นฟูป่าและจัดซื้ออุปกรณ์เดินป่าให้กับเจ้าหน้าที่พิทักษ์ป่าทั่วประเทศ',
     ),
@@ -69,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+    _getCurrentLocation(); 
     _pageController = PageController(initialPage: 0);
 
     final today = DateTime.now();
@@ -84,7 +88,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // 🌟 อัปเดตฟังก์ชันดึงข้อมูล ให้ดึงรูปภาพ (photoURL) มาด้วย
   void _loadUserData() {
     final user = FirebaseAuth.instance.currentUser;
     user?.reload().then((_) {
@@ -92,13 +95,61 @@ class _HomeScreenState extends State<HomeScreen> {
       if (updatedUser != null && mounted) {
         setState(() {
           userName = updatedUser.displayName ?? updatedUser.email?.split('@')[0] ?? 'ผู้ใช้งาน';
-          photoUrl = updatedUser.photoURL; // ดึงลิงก์รูปล่าสุดมาใส่ตัวแปร
+          photoUrl = updatedUser.photoURL;
         });
       }
     });
   }
 
-  // 🌟 ฟังก์ชันเปลี่ยนหน้าไปยัง NewsDetailScreen
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    
+    if (permission == LocationPermission.deniedForever) return; 
+
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    if (mounted) {
+      setState(() {
+        _currentPosition = position;
+      });
+    }
+  }
+
+  String _calculateDistance(double? targetLat, double? targetLng) {
+    if (_currentPosition == null || targetLat == null || targetLng == null) {
+      return 'กำลังคำนวณ...'; 
+    }
+    double distanceInMeters = Geolocator.distanceBetween(
+      _currentPosition!.latitude, _currentPosition!.longitude, targetLat, targetLng,
+    );
+    double distanceInKm = distanceInMeters / 1000;
+    return '${distanceInKm.toStringAsFixed(1)} Km';
+  }
+
+  IconData _getIconForCategory(String title) {
+    switch (title) {
+      case 'เสื้อผ้า': return Icons.checkroom;
+      case 'อาหารและน้ำ': return Icons.fastfood;
+      case 'ของเล่นเด็ก': return Icons.smart_toy;
+      case 'หนังสือ': return Icons.menu_book;
+      case 'อุปกรณ์\nการเรียน': 
+      case 'อุปกรณ์การเรียน': return Icons.school;
+      case 'อุปกรณ์\nสุขภาพ': 
+      case 'อุปกรณ์สุขภาพ': return Icons.medical_services;
+      case 'ของใช้\nส่วนตัว': 
+      case 'ของใช้ส่วนตัว': return Icons.person;
+      case 'ของใช้\nในบ้าน': 
+      case 'ของใช้ในบ้าน': return Icons.home;
+      default: return Icons.card_giftcard;
+    }
+  }
+
   void _navigateToNews(BannerItem item) {
     Navigator.push(
       context,
@@ -130,35 +181,17 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- 1. ส่วนหัว ---
               Row(
                 children: [
-                  // 🌟 1. ทำให้รูปโปรไฟล์กดได้ แล้วเด้งไปหน้า User และใช้รูปจาก Firebase
                   GestureDetector(
-                    onTap: () {
-                      context.push('/user');
-                    },
+                    onTap: () => context.push('/user'),
                     child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        shape: BoxShape.circle,
-                      ),
+                      width: 50, height: 50,
+                      decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle),
                       child: ClipOval(
                         child: (photoUrl != null && photoUrl!.isNotEmpty)
-                            ? Image.network(
-                                photoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.person, size: 30, color: Colors.grey),
-                              )
-                            : Image.network(
-                                'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.person, size: 30, color: Colors.grey),
-                              ),
+                            ? Image.network(photoUrl!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 30, color: Colors.grey))
+                            : Image.network('https://cdn-icons-png.flaticon.com/512/3135/3135715.png', fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 30, color: Colors.grey)),
                       ),
                     ),
                   ),
@@ -173,7 +206,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 20),
 
-              // --- 2. ส่วนหัวข้อแบนเนอร์ (กดได้) ---
               GestureDetector(
                 onTap: () => _navigateToNews(currentItem),
                 child: Row(
@@ -192,9 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      if (_currentPage > 0) {
-                        _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-                      }
+                      if (_currentPage > 0) _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
                     },
                     icon: Icon(Icons.arrow_back_ios, color: _currentPage == 0 ? Colors.grey : Colors.black),
                   ),
@@ -205,12 +235,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: PageView.builder(
                         controller: _pageController,
                         itemCount: bannerData.length,
-                        onPageChanged: (int index) {
-                          setState(() => _currentPage = index);
-                        },
+                        onPageChanged: (int index) => setState(() => _currentPage = index),
                         itemBuilder: (context, index) {
                           final item = bannerData[index];
-                          // 🌟 ตัวรูปภาพ Banner (กดได้)
                           return GestureDetector(
                             onTap: () => _navigateToNews(item),
                             child: Container(
@@ -227,9 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   IconButton(
                     onPressed: () {
-                      if (_currentPage < bannerData.length - 1) {
-                        _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-                      }
+                      if (_currentPage < bannerData.length - 1) _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
                     },
                     icon: Icon(Icons.arrow_forward_ios, color: _currentPage == bannerData.length - 1 ? Colors.grey : Colors.black),
                   ),
@@ -240,32 +265,159 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 30),
 
-              // --- 3. ส่วนรายการ: มูลนิธิใกล้ฉัน ---
               const Text('มูลนิธิใกล้ฉัน', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
 
-              _buildFoundationCard(
-                title: 'มูลนิธิกระจกเงา',
-                items: 'อาหาร/ของเล่น/หนังสือ/เสื้อผ้า',
-                distance: '1.5 Km (10 นาที)',
-                logoColor: Colors.yellow.shade600,
-                icons: [Icons.fastfood, Icons.toys, Icons.menu_book, Icons.checkroom],
-              ),
-              const Divider(height: 30),
-              _buildFoundationCard(
-                title: 'มูลนิธิเพื่อคนพิการ',
-                items: 'รถเข็น/อาหาร',
-                distance: '3 Km (25 นาที)',
-                logoColor: Colors.blue.shade800,
-                icons: [Icons.accessible, Icons.fastfood],
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('Foundations').snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('ไม่พบข้อมูลมูลนิธิ', style: TextStyle(color: Colors.grey)));
+                  }
+
+                  final foundations = snapshot.data!.docs.toList();
+
+                  if (_currentPosition != null) {
+                    foundations.sort((a, b) {
+                      GeoPoint? locA = (a.data() as Map<String, dynamic>)['location'];
+                      GeoPoint? locB = (b.data() as Map<String, dynamic>)['location'];
+                      
+                      if (locA == null || locB == null) return 0;
+                      
+                      double distA = Geolocator.distanceBetween(_currentPosition!.latitude, _currentPosition!.longitude, locA.latitude, locA.longitude);
+                      double distB = Geolocator.distanceBetween(_currentPosition!.latitude, _currentPosition!.longitude, locB.latitude, locB.longitude);
+                      
+                      return distA.compareTo(distB);
+                    });
+                  }
+
+                  final nearestFoundations = foundations.take(3).toList();
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: nearestFoundations.length,
+                    separatorBuilder: (context, index) => const Divider(height: 30),
+                    itemBuilder: (context, index) {
+                      final data = nearestFoundations[index].data() as Map<String, dynamic>;
+                      
+                      List<String> itemsList = List<String>.from(data['neededItems'] ?? []);
+                      String acceptedItemsText = itemsList.join('/');
+                      
+                      Color logoColor = Colors.grey.shade200;
+                      if (data['logoColor'] != null) {
+                        try {
+                          String hexStr = data['logoColor'].toString().replaceAll('0x', '').replaceAll('#', '');
+                          if (hexStr.length == 6) hexStr = 'FF$hexStr';
+                          logoColor = Color(int.parse(hexStr, radix: 16));
+                        } catch (e) {}
+                      }
+                      String? logoImage = data['logoImage'];
+
+                      GeoPoint? geoPoint = data['location'];
+                      double? lat = geoPoint?.latitude;
+                      double? lng = geoPoint?.longitude;
+
+                      String calculatedDistance = _calculateDistance(lat, lng);
+
+                      return InkWell(
+                        onTap: () {
+                          final realDetailData = {
+                            'name': data['name'] ?? 'ไม่มีชื่อ',
+                            'address': data['address'] ?? '',
+                            'rating': data['rating'] ?? '0.0',
+                            'hours': data['hours'] ?? '',
+                            'distance': calculatedDistance,
+                            'isVerified': data['isVerified'] ?? false,
+                            'phone': data['phone'] ?? '',
+                            'facebook': data['facebook'] ?? '',
+                            'website': data['website'] ?? '',
+                            'coverImage': data['coverImage'] ?? 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=600&auto=format&fit=crop', 
+                            'mapImage': data['mapImage'] ?? 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=600&auto=format&fit=crop',
+                            'latitude': lat, 
+                            'longitude': lng, 
+                            'neededItems': itemsList.map((item) => {
+                              'title': item,
+                              'icon': _getIconForCategory(item),
+                            }).toList(),
+                            'selectedCategories': [],
+                            'othersText': '',
+                          };
+                          context.push('/donation_foundation_detail', extra: realDetailData);
+                        },
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 80, height: 80,
+                              decoration: BoxDecoration(
+                                color: logoImage != null ? Colors.white : logoColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade300),
+                                image: logoImage != null 
+                                    ? DecorationImage(image: NetworkImage(logoImage), fit: BoxFit.contain)
+                                    : null,
+                              ),
+                              child: logoImage == null
+                                  ? const Icon(Icons.volunteer_activism, color: Colors.black87, size: 40)
+                                  : null,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 🌟 ปรับให้ติ๊กถูกติดกับชื่อ
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min, // ดึงไอเทมให้ชิดกัน
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          data['name'] ?? 'ไม่มีชื่อ', 
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), 
+                                          maxLines: 1, 
+                                          overflow: TextOverflow.ellipsis
+                                        )
+                                      ),
+                                      if (data['isVerified'] == true) ...[
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.verified, color: Colors.blue, size: 18), // ไอคอนหยักๆ
+                                      ]
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(acceptedItemsText, style: const TextStyle(color: Colors.grey, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.location_on, size: 14, color: Colors.redAccent),
+                                      const SizedBox(width: 4),
+                                      Text(calculatedDistance, style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: itemsList.take(4).map((itemTitle) => Padding(
+                                      padding: const EdgeInsets.only(right: 8.0),
+                                      child: Icon(_getIconForCategory(itemTitle), color: primaryBlue, size: 20),
+                                    )).toList(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
 
               const SizedBox(height: 20),
-              // 🌟 2. ทำให้ข้อความ "ค้นหามูลนิธิเพิ่มเติม" กดได้ แล้วเด้งไปหน้า Map
               GestureDetector(
-                onTap: () {
-                  context.push('/map');
-                },
+                onTap: () => context.push('/map'),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -278,7 +430,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 40),
 
-              // --- 4. ส่วนประวัติการบริจาค ---
               const Center(
                 child: Text('ประวัติการบริจาคของฉัน', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ),
@@ -321,53 +472,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-
-    bottomNavigationBar: const CustomBottomNav(currentIndex: 0),
-    );
-  }
-
-  Widget _buildFoundationCard({
-    required String title,
-    required String items,
-    required String distance,
-    required Color logoColor,
-    required List<IconData> icons,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(color: logoColor, borderRadius: BorderRadius.circular(12)),
-          child: const Icon(Icons.volunteer_activism, color: Colors.white, size: 40),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.verified, color: Colors.blue, size: 18),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(items, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-              Text(distance, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-              const SizedBox(height: 8),
-              Row(
-                children: icons.map((icon) => Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Icon(icon, color: primaryBlue, size: 20),
-                )).toList(),
-              ),
-            ],
-          ),
-        ),
-      ],
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 0),
     );
   }
 }

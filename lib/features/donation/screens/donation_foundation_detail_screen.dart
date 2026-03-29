@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart'; // 🌟 ใช้สำหรับเปิด Google Maps
+import 'package:url_launcher/url_launcher.dart'; 
 import '../../widgets/custom_bottom_nav.dart';
 
 class DonationFoundationDetailScreen extends StatelessWidget {
@@ -13,9 +13,13 @@ class DonationFoundationDetailScreen extends StatelessWidget {
 
   static const Color primaryTeal = Color(0xFF64B5C7);
 
-  // 🌟 ฟังก์ชันเปิด Google Maps (แก้ไข URL ให้ถูกต้อง)
-  Future<void> _openGoogleMaps() async {
-    final Uri googleMapsUrl = Uri.parse('https://maps.google.com/?q=มูลนิธิกระจกเงา');
+  Future<void> _openGoogleMaps(double? lat, double? lng) async {
+    if (lat == null || lng == null) {
+      debugPrint('ไม่มีพิกัดแผนที่สำหรับมูลนิธินี้');
+      return;
+    }
+    final Uri googleMapsUrl = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    
     if (!await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication)) {
       debugPrint('ไม่สามารถเปิดแผนที่ได้');
     }
@@ -23,8 +27,23 @@ class DonationFoundationDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 1. แก้ไขการดึงข้อมูลเป็น List<dynamic> เพื่อป้องกันแอปค้างตอนเปลี่ยนหน้า
     final List<dynamic> neededItems = foundationData['neededItems'] ?? [];
+    final String coverImage = foundationData['coverImage'] ?? 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=600&auto=format&fit=crop';
+    final String mapImage = foundationData['mapImage'] ?? 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=600&auto=format&fit=crop';
+    final bool isVerified = foundationData['isVerified'] ?? false;
+    final String rating = foundationData['rating'] ?? '-';
+    final String hours = foundationData['hours'] ?? 'ไม่ได้ระบุเวลา';
+    final String distance = foundationData['distance'] ?? 'ไม่ได้ระบุระยะทาง';
+    
+    final double? latitude = foundationData['latitude'];
+    final double? longitude = foundationData['longitude'];
+
+    // 🌟 ดึงข้อมูลของบริจาค เพื่อเช็คว่ามาจากหน้าไหน
+    final List<dynamic> selectedCategories = foundationData['selectedCategories'] ?? [];
+    final String othersText = foundationData['othersText'] ?? '';
+    
+    // 🌟 ตัวแปรเช็คว่า "ได้เลือกของบริจาคมาหรือยัง?" (ถ้า true คือมาจากหน้า 2/5, ถ้า false คือมาจาก Home)
+    final bool hasSelectedItems = selectedCategories.isNotEmpty || othersText.isNotEmpty;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -37,11 +56,10 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- 1. ส่วนรูปภาพปก (Cover Image) และปุ่มย้อนกลับ ---
                     Stack(
                       children: [
                         Image.network(
-                          foundationData['coverImage'],
+                          coverImage, 
                           width: double.infinity,
                           height: 220,
                           fit: BoxFit.cover,
@@ -51,9 +69,8 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                             child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
                           ),
                         ),
-                        // ปุ่มย้อนกลับ
                         Positioned(
-                          top: 33, // ปรับความสูงให้พ้นขอบมือถือ
+                          top: 33, 
                           left: 10,
                           child: GestureDetector(
                             onTap: () => context.pop(),
@@ -72,7 +89,6 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // --- 2. ส่วนชื่อและที่อยู่ ---
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -93,33 +109,28 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              const Icon(Icons.location_on, color: Colors.redAccent, size: 40),
+                              const Icon(Icons.location_on, color: Colors.redAccent, size: 60),
                             ],
                           ),
                           const SizedBox(height: 20),
 
-                          // --- 3. ส่วนแผนที่ (กดเพื่อเปิด Google Maps) ---
                           GestureDetector(
-                            onTap: _openGoogleMaps,
+                            onTap: () => _openGoogleMaps(latitude, longitude),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(16),
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
                                   Image.network(
-                                    foundationData['mapImage'],
+                                    mapImage, 
                                     width: double.infinity,
                                     height: 150,
                                     fit: BoxFit.cover,
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black87,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      height: 150,
+                                      color: Colors.grey.shade300,
+                                      child: const Icon(Icons.map, size: 50, color: Colors.grey),
                                     ),
-                                    child: const Icon(Icons.volunteer_activism, color: primaryTeal, size: 30),
                                   ),
                                 ],
                               ),
@@ -130,8 +141,8 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                           const Divider(thickness: 1),
                           const SizedBox(height: 20),
 
-                          // --- 4. ข้อมูลพื้นฐาน ---
                           const Text('ข้อมูลพื้นฐาน', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 10),
                           GridView.count(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
@@ -140,10 +151,10 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
                             children: [
-                              _buildInfoPill(icon: Icons.star, iconColor: Colors.amber, text: '${foundationData['rating']} (Google Maps)'),
-                              _buildInfoPill(icon: Icons.access_time, iconColor: primaryTeal, text: foundationData['hours']),
-                              _buildInfoPill(icon: Icons.route, iconColor: primaryTeal, text: foundationData['distance']),
-                              _buildInfoPill(icon: Icons.verified, iconColor: primaryTeal, text: foundationData['isVerified'] ? 'ยืนยันตัวตนแล้ว' : 'รอการยืนยัน'),
+                              _buildInfoPill(icon: Icons.star, iconColor: Colors.amber, text: '$rating (Google Maps)'),
+                              _buildInfoPill(icon: Icons.access_time, iconColor: primaryTeal, text: hours),
+                              _buildInfoPill(icon: Icons.route, iconColor: primaryTeal, text: distance),
+                              _buildInfoPill(icon: Icons.verified, iconColor: primaryTeal, text: isVerified ? 'ยืนยันตัวตนแล้ว' : 'รอการยืนยัน'),
                             ],
                           ),
 
@@ -151,8 +162,8 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                           const Divider(thickness: 1),
                           const SizedBox(height: 20),
 
-                          // --- 5. สิ่งของที่ต้องการ ---
                           const Text('สิ่งของที่ต้องการ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 10),
                           GridView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
@@ -165,8 +176,11 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                             itemCount: neededItems.length,
                             itemBuilder: (context, index) {
                               final item = neededItems[index];
-                              // 🌟 2. ดึงข้อมูลแบบไม่ล็อค Type
-                              return _buildInfoPill(icon: item['icon'], iconColor: primaryTeal, text: item['title'].toString());
+                              return _buildInfoPill(
+                                icon: item['icon'] as IconData? ?? Icons.card_giftcard, 
+                                iconColor: primaryTeal, 
+                                text: item['title'].toString()
+                              );
                             },
                           ),
 
@@ -174,46 +188,72 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                           const Divider(thickness: 1),
                           const SizedBox(height: 20),
 
-                          // --- 6. ติดต่อ ---
                           const Text('ติดต่อ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 16),
-                          Text('เบอร์โทรติดต่อ: ${foundationData['phone']}', style: const TextStyle(fontSize: 14)),
+                          Text('เบอร์โทรติดต่อ: ${foundationData['phone'] ?? '-'}', style: const TextStyle(fontSize: 14)),
                           const SizedBox(height: 10),
-                          Text('Facebook: ${foundationData['facebook']}', style: const TextStyle(fontSize: 14)),
+                          Text('Facebook: ${foundationData['facebook'] ?? '-'}', style: const TextStyle(fontSize: 14)),
                           const SizedBox(height: 10),
-                          Text('Website : ${foundationData['website']}', style: const TextStyle(fontSize: 14)),
+                          Text('Website : ${foundationData['website'] ?? '-'}', style: const TextStyle(fontSize: 14)),
 
                           const SizedBox(height: 40),
 
-                          // --- 7. ปุ่มบริจาคสิ่งของ ---
-                          SizedBox(
-                            width: double.infinity,
-                            height: 60,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                // 🌟 ส่งข้อมูลของจริงที่รับมา ไปยังหน้าเลือกวันที่
-                                context.push('/donation_date', extra: {
-                                  'foundationName': foundationData['name'],
-                                  // เอา ['เสื้อผ้า', 'หนังสือ'] ออก แล้วดึงข้อมูลจริงที่ส่งมาจากจุดที่ 1 มาใช้
-                                  'selectedCategories': foundationData['selectedCategories'] ?? [],
-                                  'othersText': foundationData['othersText'] ?? '',
-                                });
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryTeal,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                elevation: 0,
+                          // 🌟 เช็คเงื่อนไขการแสดงปุ่มตรงนี้!
+                          if (hasSelectedItems)
+                            // กรณีที่ 1: มาจากหน้าเลือกของ (แสดงปุ่มเพื่อไปต่อ Step 3)
+                            SizedBox(
+                              width: double.infinity,
+                              height: 60,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  context.push('/donation_date', extra: {
+                                    'foundationName': foundationData['name'] ?? 'มูลนิธิ',
+                                    'selectedCategories': foundationData['selectedCategories'] ?? [],
+                                    'othersText': foundationData['othersText'] ?? '',
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryTeal,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('บริจาคสิ่งของให้กับมูลนิธินี้', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                                    SizedBox(width: 10),
+                                    Icon(Icons.arrow_circle_right_outlined, color: Colors.white, size: 28),
+                                  ],
+                                ),
                               ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('บริจาคสิ่งของให้กับมูลนิธินี้', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                                  SizedBox(width: 10),
-                                  Icon(Icons.arrow_circle_right_outlined, color: Colors.white, size: 28),
-                                ],
+                            )
+                          else
+                            // กรณีที่ 2: มาจากหน้า Home (เปลี่ยนปุ่มเป็น "เริ่มบริจาค" เพื่อพากลับไป Step 1)
+                            // 💡 ถ้าคุณอยากซ่อนปุ่มไปเลย ไม่ต้องมีปุ่มอะไรทั้งสิ้น ให้ลบโค้ดบล็อก else นี้ทิ้งได้เลยครับ!
+                            SizedBox(
+                              width: double.infinity,
+                              height: 60,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  context.push('/donation_selection'); // เด้งไปหน้าแรก 1/5
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  side: const BorderSide(color: primaryTeal, width: 2),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('เริ่มจองการบริจาค', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryTeal)),
+                                    SizedBox(width: 10),
+                                    Icon(Icons.inventory_2_outlined, color: primaryTeal, size: 28),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
+
                           const SizedBox(height: 20),
                         ],
                       ),
@@ -229,7 +269,6 @@ class DonationFoundationDetailScreen extends StatelessWidget {
     );
   }
 
-  // Widget ช่วยสร้างกล่องข้อมูลแบบมีกรอบมนๆ
   Widget _buildInfoPill({required IconData icon, required Color iconColor, required String text}) {
     return Container(
       decoration: BoxDecoration(
