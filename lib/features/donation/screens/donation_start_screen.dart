@@ -21,6 +21,7 @@ class DonationStartScreen extends StatelessWidget {
               Image.asset(
                 'assets/images/logo_crop.png',
                 height: 140,
+                width: 140,
               ),
 
               SizedBox(height: 10),
@@ -41,7 +42,8 @@ class DonationStartScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 40.0),
                 child: ElevatedButton(
                   onPressed: () {
-                    // TODO: ใส่ Action เมื่อกดปุ่ม เช่น นำทางไปหน้ากรอกฟอร์มหรือหน้าอัปโหลดรูปภาพ
+                    // 🌟 สั่งให้ไปหน้าเลือกสิ่งของบริจาค
+                    context.push('/donation_selection');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryTeal,
