@@ -195,13 +195,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(userName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(userName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none, color: Colors.black)),
                 ],
               ),
               const SizedBox(height: 16),
-              Text('สวัสดี $userName มาทำความดีกันเถอะ !', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+              Text('สวัสดี $userName มาทำความดีกันเถอะ !', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold,color: Color(0xFF64B5C7))),
 
               const SizedBox(height: 20),
 
