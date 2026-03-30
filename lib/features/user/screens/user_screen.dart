@@ -135,7 +135,7 @@ class _UserScreenState extends State<UserScreen> {
                         donationCount = snapshot.data!.docs.where((doc) {
                           final data = doc.data() as Map<String, dynamic>;
                           final status = data['status'] ?? '';
-                          return status == 'pending' || status == 'completed' || status == 'success';
+                          return  status == 'completed' || status == 'success';
                         }).length;
                       }
 

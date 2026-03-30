@@ -103,6 +103,99 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
     return '$firstPart และ${items.last}';
   }
 
+  // 🌟 ฟังก์ชันแสดง Pop-up ยืนยันการยกเลิก
+  void _showCancelDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+              SizedBox(width: 8),
+              Text('ยืนยันการยกเลิก', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Text('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองบริจาคนี้?\nหากยกเลิกแล้วจะไม่สามารถย้อนกลับได้'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context), // ปิด Pop-up
+              child: const Text('ไม่ยกเลิก', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // ปิด Pop-up
+                _cancelBooking(); // เรียกฟังก์ชันอัปเดตฐานข้อมูล
+              },
+              child: const Text('ยืนยันการยกเลิก', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 🌟 ฟังก์ชันอัปเดตสถานะเป็น Cancelled ใน Firebase
+  Future<void> _cancelBooking() async {
+    final String? bookingId = widget.bookingData['booking_id'];
+    
+    if (bookingId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาด: ไม่พบรหัสการจอง')));
+      return;
+    }
+
+    setState(() => isLoading = true); // โชว์ตัวโหลดหน้าจอ
+
+    try {
+      // อัปเดตสถานะใน Firestore
+      await FirebaseFirestore.instance
+          .collection('DonationBookings')
+          .doc(bookingId)
+          .update({
+            'status': 'cancelled',
+            // รีเซ็ตประวัติการแจ้งเตือน เพื่อให้มันเด้งแจ้งเตือนการยกเลิกด้วย (ถ้าต้องการ)
+            'dismissed_status': FieldValue.delete(), 
+          });
+
+     if (mounted) {
+        // 🌟 โชว์ข้อความสีแดงแจ้งว่าสำเร็จ (เด้งจากด้านบน)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            elevation: 10,
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red.shade600,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            // 🌟 ทริคดันแจ้งเตือนไปไว้ด้านบนสุด
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height - 180, // ดันขึ้นไปด้านบน
+              left: 20,
+              right: 20,
+            ),
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text('ยกเลิกการจองบริจาคเรียบร้อยแล้ว', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15)),
+                ),
+              ],
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        
+        // เด้งกลับไปหน้าประวัติรวม
+        context.pop(); 
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการยกเลิก กรุณาลองใหม่')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // ดึงและเตรียมข้อมูลสิ่งของ
@@ -221,6 +314,31 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
                           );
                         },
                       ),
+                    const SizedBox(height: 40),
+
+                    // 🌟 แสดงปุ่มยกเลิก เฉพาะตอนที่สถานะยังเป็น pending เท่านั้น
+                    if (widget.bookingData['status'] == 'pending')
+                      SizedBox(
+                        width: double.infinity,
+                        height: 55,
+                        child: ElevatedButton(
+                          onPressed: _showCancelDialog, // เรียก Pop-up
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade500,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.cancel_outlined, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text('ยกเลิกการจองบริจาค', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
                     const SizedBox(height: 40),
                   ],
                 ),

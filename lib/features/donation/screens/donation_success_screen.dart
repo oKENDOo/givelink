@@ -43,13 +43,15 @@ class DonationSuccessScreen extends StatelessWidget {
                   height: 60,
                   child: ElevatedButton(
                     onPressed: () {
-                      // 🌟 1. สั่งให้ Tab บริจาค "กดย้อนกลับ" (Pop) รัวๆ จนกว่าจะถึงหน้าแรก (/donation_start)
-                      while (context.canPop()) {
-                        context.pop();
-                      }
+                      // 🌟 1. สั่งให้ Tab บริจาคนี้ กลับไปตั้งต้นที่หน้าแรกสุดแบบเงียบๆ (เพื่อลบหน้า Success ทิ้ง)
+                      context.go('/donation_start');
                       
-                      // 🌟 2. เมื่อล้างหน้าจอเสร็จแล้ว ค่อยสั่งให้สลับไปที่หน้าประวัติ (History)
-                      context.go('/history');
+                      // 🌟 2. สลับหน้าไปยัง Tab ประวัติ (History)
+                     Future.delayed(const Duration(milliseconds: 100), () {
+                        if (context.mounted) {
+                          context.go('/history');
+                        }
+                      });
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryTeal,

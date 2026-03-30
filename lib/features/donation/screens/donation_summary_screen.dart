@@ -157,9 +157,44 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
       // 6. อัปเดตข้อมูล booking_id กลับเข้าไปในเอกสารตัวมันเอง
       await docRef.update({'booking_id': docRef.id});
 
-      // 7. สำเร็จ! พยายามเปลี่ยนหน้าไปที่หน้า Success
+     // 7. สำเร็จ! พยายามเปลี่ยนหน้าไปที่หน้า Success
       if (mounted) {
         setState(() { isSaving = false; });
+
+        // 🌟 สร้างแจ้งเตือนเด้งจากด้านบนหน้าจอ
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            elevation: 10,
+            behavior: SnackBarBehavior.floating, // ทำให้ลอยได้
+            backgroundColor: Colors.green.shade600, // สีพื้นหลังแจ้งเตือน
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // ขอบมนสวยงาม
+            // 🌟 ทริคดันแจ้งเตือนไปไว้ด้านบนสุด โดยลบความสูงของหน้าจอออก
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height - 180, 
+              left: 20,
+              right: 20,
+            ),
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 32),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('ทำรายการสำเร็จ!', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text('ระบบได้บันทึกการจองบริจาคของคุณแล้ว', style: TextStyle(fontSize: 13, color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            duration: const Duration(seconds: 3), // โชว์ค้างไว้ 3 วินาที
+          ),
+        );
+
+        // 🌟 เปลี่ยนไปหน้า Success หลังโชว์แจ้งเตือน
         context.push('/donation_success');
       }
 

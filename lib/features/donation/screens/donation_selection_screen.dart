@@ -56,12 +56,8 @@ class _DonationSelectionScreenState extends State<DonationSelectionScreen> {
         leading: IconButton(
           icon: Image.asset('assets/icons/back_arrow.png', width: 35, height: 35),
           onPressed: () {
-            // 🌟 เช็คก่อนว่ามีหน้าให้ถอยไหม ถ้ามีก็ถอย ถ้าไม่มีให้เด้งกลับหน้าหลัก
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/home');
-            }
+            // 🌟 ลบการเช็ค Home ทิ้งไปเลย เพราะยังไงมันก็จะย้อนกลับไปหน้า Donation Start เสมอ
+           context.go('/donation_start');
           },
         ),
         title: const Text('1 / 5', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 25)),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 class NewsDetailScreen extends StatelessWidget {
   // รับข้อมูลจากหน้า Home มาแสดงผล
@@ -99,7 +100,17 @@ class NewsDetailScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      // 🌟 1. เติมคำว่า async ตรงนี้
+                      onPressed: () async { 
+                        String shareText = 'โครงการดีๆ จาก $foundation!\n\nเรื่อง: $title\n\nมาร่วมทำความดีด้วยกันผ่านแอป GiveLink นะครับ 💙';
+                        
+                        // 🌟 2. ใส่ try-catch และ await ดักไว้
+                        try {
+                          await Share.share(shareText);
+                        } catch (e) {
+                          debugPrint('เกิดข้อผิดพลาดในการแชร์: $e');
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF64B5C7),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

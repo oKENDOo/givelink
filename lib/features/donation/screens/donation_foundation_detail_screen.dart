@@ -72,7 +72,14 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                           top: 33, 
                           left: 10,
                           child: GestureDetector(
-                            onTap: () => context.pop(),
+                            onTap: () {
+                              // 🌟 1. ดักการกด Back ไม่ให้แอปพัง
+                              if (context.canPop()) {
+                                context.pop();
+                              } else {
+                                context.go('/map'); // ถ้าย้อนไม่ได้ให้กลับแผนที่
+                              }
+                            },
                             child: Image.asset(
                               'assets/icons/back_arrow.png', 
                               width: 35, 
@@ -197,9 +204,8 @@ class DonationFoundationDetailScreen extends StatelessWidget {
 
                           const SizedBox(height: 40),
 
-                          // 🌟 เช็คเงื่อนไขการแสดงปุ่มตรงนี้!
+                          // 🌟 ถ้าเข้าผ่าน Tab บริจาค (มีของที่เลือกมาแล้ว) ถึงจะโชว์ปุ่มไปต่อ
                           if (hasSelectedItems)
-                            // กรณีที่ 1: มาจากหน้าเลือกของ (แสดงปุ่มเพื่อไปต่อ Step 3)
                             SizedBox(
                               width: double.infinity,
                               height: 60,
@@ -225,33 +231,8 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                            )
-                          else
-                            // กรณีที่ 2: มาจากหน้า Home (เปลี่ยนปุ่มเป็น "เริ่มบริจาค" เพื่อพากลับไป Step 1)
-                            // 💡 ถ้าคุณอยากซ่อนปุ่มไปเลย ไม่ต้องมีปุ่มอะไรทั้งสิ้น ให้ลบโค้ดบล็อก else นี้ทิ้งได้เลยครับ!
-                            SizedBox(
-                              width: double.infinity,
-                              height: 60,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  context.go('/donation_selection'); // เด้งไปหน้าแรก 1/5
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  side: const BorderSide(color: primaryTeal, width: 2),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  elevation: 0,
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text('เริ่มจองการบริจาค', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryTeal)),
-                                    SizedBox(width: 10),
-                                    Icon(Icons.inventory_2_outlined, color: primaryTeal, size: 28),
-                                  ],
-                                ),
-                              ),
                             ),
+                          // ❌ ลบ else ทิ้งไปแล้ว (ถ้ามาจาก Home/Map จะไม่มีปุ่มอะไรโชว์เลย)
 
                           const SizedBox(height: 20),
                         ],
@@ -266,7 +247,6 @@ class DonationFoundationDetailScreen extends StatelessWidget {
       ),
     );
   }
-
   Widget _buildInfoPill({required IconData icon, required Color iconColor, required String text}) {
     return Container(
       decoration: BoxDecoration(
