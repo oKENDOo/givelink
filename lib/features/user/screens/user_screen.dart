@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // 🌟 เพิ่ม Import Firestore สำหรับดึงข้อมูล
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -30,7 +31,7 @@ class _UserScreenState extends State<UserScreen> {
     }
   }
 
-  // 🌟 ฟังก์ชันออกจากระบบ (แก้ไขให้มียืนยันและไปหน้า Welcome)
+  // ฟังก์ชันออกจากระบบ 
   Future<void> _signOut() async {
     showDialog(
       context: context,
@@ -38,19 +39,16 @@ class _UserScreenState extends State<UserScreen> {
         title: const Text('ยืนยันการออกจากระบบ'),
         content: const Text('คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?'),
         actions: [
-          // ปุ่มยกเลิก
           TextButton(
-            onPressed: () => Navigator.pop(context), // ปิดหน้าต่าง Popup
+            onPressed: () => Navigator.pop(context), 
             child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
           ),
-          // ปุ่มยืนยันออกจากระบบ
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // ปิดหน้าต่าง Popup ก่อน
-              await FirebaseAuth.instance.signOut(); // สั่งออกจากระบบ Firebase
+              Navigator.pop(context); 
+              await FirebaseAuth.instance.signOut(); 
               
               if (mounted) {
-                // 🌟 ใช้ context.go เพื่อลบประวัติเก่าทิ้ง ไม่ให้กดย้อนกลับมาได้
                 context.go('/welcome'); 
               }
             },
@@ -78,11 +76,10 @@ class _UserScreenState extends State<UserScreen> {
               try {
                 await FirebaseAuth.instance.currentUser?.delete();
                 if (mounted) {
-                  context.go('/welcome'); // 🌟 ลบเสร็จให้กลับไปหน้า Welcome เหมือนกัน
+                  context.go('/welcome'); 
                 }
               } catch (e) {
                 print("Error deleting account: $e");
-                // ถ้า Error มักจะเกิดจากต้องให้ผู้ใช้ Login ใหม่ก่อนเพื่อความปลอดภัย
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('กรุณาออกจากระบบและเข้าสู่ระบบใหม่อีกครั้งก่อนทำการลบบัญชี')),
@@ -124,17 +121,43 @@ class _UserScreenState extends State<UserScreen> {
                   ),
                   const SizedBox(height: 8),
                   
-                  // จำนวนการบริจาค
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.volunteer_activism, color: primaryBlue, size: 18),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'จำนวนการบริจาค 0 ครั้ง',
-                        style: TextStyle(fontSize: 14, color: Colors.black87),
-                      ),
-                    ],
+                  // 🌟 จำนวนการบริจาค (ดึงข้อมูลจริงจาก Firestore)
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('DonationBookings')
+                        .where('user_id', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      int donationCount = 0;
+
+                      if (snapshot.hasData) {
+                        // กรองนับเฉพาะรายการที่กำลังดำเนินการ และ เสร็จสิ้น
+                        donationCount = snapshot.data!.docs.where((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final status = data['status'] ?? '';
+                          return status == 'pending' || status == 'completed' || status == 'success';
+                        }).length;
+                      }
+
+                     // ... ส่วน StreamBuilder ด้านบน ...
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // ✅ โค้ดใหม่ (ใช้รูปโลโก้แทนไอคอน)
+                          Image.asset(
+                            'assets/images/logo_crop.png', 
+                            width: 24, // กำหนดความกว้างให้เหมาะสม
+                            height: 24, // กำหนดความสูงให้เหมาะสม
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'จำนวนการบริจาค $donationCount ครั้ง',
+                            style: const TextStyle(fontSize: 14, color: Colors.black87),
+                          ),
+                        ],
+                      );
+// ...
+                    },
                   ),
                 ],
               ),
@@ -152,20 +175,19 @@ class _UserScreenState extends State<UserScreen> {
                       icon: Icons.person,
                       title: 'ข้อมูลส่วนบุคคล',
                       onTap: () {
-                        // 🌟 กดแล้วพาไปหน้าแก้ไขข้อมูล
                         context.push('/user_edit');
                       },
                     ),
                     _buildMenuOption(
                       icon: Icons.logout,
                       title: 'ออกจากระบบ',
-                      onTap: _signOut, // 🌟 เรียกใช้ฟังก์ชันที่แก้ใหม่
+                      onTap: _signOut, 
                     ),
                     _buildMenuOption(
                       icon: Icons.delete,
                       title: 'ลบบัญชีผู้ใช้',
                       onTap: _deleteAccount,
-                      isDestructive: true, // ทำให้ไอคอนลบเป็นสีแดงได้ (ปรับให้ตรงกับโค้ดด้านล่าง)
+                      isDestructive: true, 
                     ),
                   ],
                 ),
