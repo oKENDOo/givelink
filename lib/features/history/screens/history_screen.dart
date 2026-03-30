@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart'; 
+import 'package:go_router/go_router.dart'; // 🌟 เพิ่มบรรทัดนี้เข้าไป
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -149,8 +150,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
           subtitle: itemsText, 
           date: dateText,
           onTap: () {
-            // TODO: นำทางไปหน้ารายละเอียดการจอง
-            debugPrint('กดดูรายละเอียด Booking ID: ${data['booking_id']}');
+            // 🌟 ลิงก์ไปหน้าประวัติแบบละเอียด พร้อมส่งข้อมูลใบจองไปด้วย
+            context.push('/history_detail', extra: data);
           },
         );
       },
@@ -229,6 +230,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+ // line 203
   // --- Widget สำหรับหน้าว่าง (Empty State) ---
   Widget _buildEmptyState(String message) {
     return Center(
@@ -236,12 +238,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: primaryBlue, width: 3),
             ),
-            child: Icon(Icons.volunteer_activism, size: 60, color: primaryBlue),
+            // 🌟 ✅ แทนที่ Icon ด้วย Image.asset ตรงนี้ครับ
+            child: Image.asset(
+              'assets/images/logo_crop.png',
+              width: 120, // กำหนดขนาดให้เท่ากับไอคอนเดิม
+              height: 120,
+              // เผื่อไว้กรณีโหลดภาพไม่สำเร็จ ให้แสดงไอคอนสำรอง
+              errorBuilder: (context, error, stackTrace) => Icon(Icons.volunteer_activism, size: 60, color: primaryBlue),
+            ),
           ),
           const SizedBox(height: 20),
           Text(

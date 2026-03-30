@@ -234,7 +234,7 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                               height: 60,
                               child: ElevatedButton(
                                 onPressed: () {
-                                  context.push('/donation_selection'); // เด้งไปหน้าแรก 1/5
+                                  context.go('/donation_selection'); // เด้งไปหน้าแรก 1/5
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,

@@ -54,9 +54,15 @@ class _DonationSelectionScreenState extends State<DonationSelectionScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          // 🌟 ตรวจสอบ Path ของรูปภาพลูกศรย้อนกลับ
           icon: Image.asset('assets/icons/back_arrow.png', width: 35, height: 35),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            // 🌟 เช็คก่อนว่ามีหน้าให้ถอยไหม ถ้ามีก็ถอย ถ้าไม่มีให้เด้งกลับหน้าหลัก
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
         title: const Text('1 / 5', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 25)),
         centerTitle: true,

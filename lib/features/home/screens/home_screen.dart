@@ -65,7 +65,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  late final Map<DateTime, List<String>> _donationEvents;
+  
+  // 🌟 1. เปลี่ยนตัวแปรเก็บข้อมูล Event ให้เก็บเป็น Map ของ Firebase Document แทน String
+  Map<DateTime, List<Map<String, dynamic>>> _donationEvents = {};
 
   @override
   void initState() {
@@ -73,18 +75,50 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadUserData();
     _getCurrentLocation(); 
     _pageController = PageController(initialPage: 0);
-
-    final today = DateTime.now();
-    _donationEvents = {
-      DateTime(today.year, today.month, today.day + 2): ['บริจาคมูลนิธิกระจกเงา'],
-      DateTime(today.year, today.month, today.day + 5): ['บริจาคมูลนิธิเพื่อคนพิการ'],
-    };
+    _selectedDay = _focusedDay; // กำหนดให้เลือกวันปัจจุบันเป็นค่าเริ่มต้น
+    _listenToDonationEvents(); // 🌟 2. เรียกฟังก์ชันดึงข้อมูลประวัติ
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  // 🌟 3. ฟังก์ชันดึงประวัติการบริจาคจาก Firestore แบบ Real-time
+  void _listenToDonationEvents() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    FirebaseFirestore.instance
+        .collection('DonationBookings')
+        .where('user_id', isEqualTo: user.uid)
+        .snapshots()
+        .listen((snapshot) {
+      
+      final Map<DateTime, List<Map<String, dynamic>>> newEvents = {};
+      
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['donation_date'] != null) {
+          // แปลง Timestamp จาก Firebase ให้เป็น DateTime
+          DateTime date = (data['donation_date'] as Timestamp).toDate();
+          // แปลงเวลาให้เป็น UTC ตรงเป๊ะตามวัน (ตัดชั่วโมง นาที ทิ้ง เพื่อให้ตรงกับ TableCalendar)
+          DateTime normalizedDate = DateTime.utc(date.year, date.month, date.day);
+          
+          if (newEvents[normalizedDate] == null) {
+            newEvents[normalizedDate] = [];
+          }
+          newEvents[normalizedDate]!.add(data);
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _donationEvents = newEvents;
+        });
+      }
+    });
   }
 
   void _loadUserData() {
@@ -163,8 +197,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  List<String> _getEventsForDay(DateTime day) {
-    final normalizedDay = DateTime(day.year, day.month, day.day);
+  // 🌟 4. ดึงข้อมูล Event ประจำวันส่งให้ปฏิทิน
+  List<Map<String, dynamic>> _getEventsForDay(DateTime day) {
+    final normalizedDay = DateTime.utc(day.year, day.month, day.day);
     return _donationEvents[normalizedDay] ?? [];
   }
 
@@ -369,9 +404,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // 🌟 ปรับให้ติ๊กถูกติดกับชื่อ
                                   Row(
-                                    mainAxisSize: MainAxisSize.min, // ดึงไอเทมให้ชิดกัน
+                                    mainAxisSize: MainAxisSize.min, 
                                     children: [
                                       Flexible(
                                         child: Text(
@@ -383,7 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       if (data['isVerified'] == true) ...[
                                         const SizedBox(width: 4),
-                                        const Icon(Icons.verified, color: Colors.blue, size: 18), // ไอคอนหยักๆ
+                                        const Icon(Icons.verified, color: Colors.blue, size: 18), 
                                       ]
                                     ],
                                   ),
@@ -416,7 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 20),
               GestureDetector(
-                onTap: () => context.push('/map'),
+                onTap: () => context.go('/map'),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -466,11 +500,101 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
+              const SizedBox(height: 20),
+
+              // 🌟 5. ส่วนแสดงข้อมูลประวัติที่คลิกเลือกจากปฏิทิน
+              _buildEventList(),
+
               const SizedBox(height: 40),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // 🌟 6. สร้าง Widget สำหรับแสดงรายการบริจาคใตัแผนที่
+  Widget _buildEventList() {
+    final selectedEvents = _getEventsForDay(_selectedDay ?? _focusedDay);
+
+    if (selectedEvents.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Text('ไม่มีประวัติการบริจาคในวันนี้', style: TextStyle(color: Colors.grey, fontSize: 15)),
+        ),
+      );
+    }
+
+    return Column(
+      children: selectedEvents.map((event) {
+        String foundationName = event['foundation_name'] ?? 'ไม่ระบุชื่อมูลนิธิ';
+        
+        // จัดการเรื่องสิ่งของ
+        List<dynamic> categories = event['selected_categories'] ?? [];
+        String others = event['others_text'] ?? '';
+        List<String> allItems = categories.map((e) => e.toString().replaceAll('\n', '')).toList();
+        if (others.isNotEmpty) allItems.add(others);
+        
+        String itemsText = 'ไม่ระบุ';
+        if (allItems.isNotEmpty) {
+          if (allItems.length <= 2) {
+            itemsText = allItems.join(', ');
+          } else {
+            itemsText = '${allItems.take(2).join(', ')} +${allItems.length - 2}';
+          }
+        }
+
+        // จัดการเรื่องสถานะ (Status)
+        String statusRaw = event['status'] ?? 'pending';
+        String statusText = 'กำลังดำเนินการ';
+        Color statusColor = Colors.orange;
+        
+        if (statusRaw == 'completed' || statusRaw == 'success') {
+          statusText = 'เสร็จสิ้น';
+          statusColor = Colors.green;
+        } else if (statusRaw == 'cancelled' || statusRaw == 'cancel') {
+          statusText = 'ยกเลิก';
+          statusColor = Colors.red;
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300),
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: primaryBlue.withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(Icons.inventory_2_outlined, color: primaryBlue),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(foundationName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 4),
+                    Text('บริจาค: $itemsText', style: const TextStyle(color: Colors.grey, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                child: Text(statusText, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

@@ -18,6 +18,7 @@ import '../../features/donation/screens/donation_image_screen.dart';
 import '../../features/donation/screens/donation_summary_screen.dart';
 import '../../features/donation/screens/donation_success_screen.dart';
 import '../../features/user/screens/user_edit_info_screen.dart';
+import '../../features/history/screens/history_detail_screen.dart';
 
 // Import หน้ากรอบหลัก (ที่มีแถบสีฟ้า)
 import '../../features/main_layout_screen.dart';
@@ -117,6 +118,13 @@ final appRouter = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/history', builder: (context, state) => const HistoryScreen()),
+            GoRoute(
+              path: '/history_detail',
+              builder: (context, state) {
+                final data = state.extra as Map<String, dynamic>? ?? {};
+                return HistoryDetailScreen(bookingData: data);
+              },
+            ),
           ],
         ),
         // 📍 Tab 4: ผู้ใช้
