@@ -38,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentPage = 0;
   
   Position? _currentPosition;
+  late Stream<QuerySnapshot> _foundationsStream; // 🌟 1. เพิ่มตัวแปรนี้ไว้เก็บข้อมูลมูลนิธิ
 
   final List<BannerItem> bannerData = [
     BannerItem(
@@ -76,8 +77,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadUserData();
     _getCurrentLocation(); 
     _pageController = PageController(initialPage: 0);
-    _selectedDay = _focusedDay; // กำหนดให้เลือกวันปัจจุบันเป็นค่าเริ่มต้น
-    _listenToDonationEvents(); // 🌟 2. เรียกฟังก์ชันดึงข้อมูลประวัติ
+    _selectedDay = _focusedDay; 
+    _listenToDonationEvents(); 
+    
+    // 🌟 2. โหลดข้อมูลฐานข้อมูลมาเก็บไว้แค่ "ครั้งเดียว" ตอนเปิดแอป
+    _foundationsStream = FirebaseFirestore.instance.collection('Foundations').snapshots();
   }
 
   @override
@@ -272,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 children: [
                   GestureDetector(
-                    onTap: () => context.push('/user'),
+                    onTap: () => context.go('/user'),
                     child: Container(
                       width: 50, height: 50,
                       decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle),
@@ -366,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
 
               StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('Foundations').snapshots(),
+                stream: _foundationsStream, // 🌟 3. เปลี่ยนมาใช้ตัวแปรที่เราโหลดเตรียมไว้แล้ว
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
