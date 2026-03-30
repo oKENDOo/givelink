@@ -37,12 +37,13 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
-  // 🌟 2. ดึงข้อมูลมูลนิธิทั้งหมดมาเก็บไว้ใน List แบบเบื้องหลัง
+// 🌟 2. ดึงข้อมูลมูลนิธิทั้งหมดมาเก็บไว้ใน List แบบเบื้องหลัง
   void _fetchFoundationsForSearch() {
     FirebaseFirestore.instance.collection('Foundations').snapshots().listen((snapshot) {
       if (mounted) {
         setState(() {
-          _allFoundations = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+          // ลบ as Map<String, dynamic> ออกไปแล้วครับ
+          _allFoundations = snapshot.docs.map((doc) => doc.data()).toList();
         });
       }
     });
