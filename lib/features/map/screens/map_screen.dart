@@ -19,10 +19,33 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? _currentPosition;
   bool _isLoadingLocation = true; 
 
+  // 🌟 1. ตัวแปรสำหรับระบบค้นหา
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  List<Map<String, dynamic>> _allFoundations = []; // เก็บข้อมูลมูลนิธิทั้งหมดไว้ค้นหา
+
   @override
   void initState() {
     super.initState();
     _getUserLocation(); 
+    _fetchFoundationsForSearch(); // 🌟 โหลดข้อมูลมูลนิธิมาเตรียมไว้ค้นหา
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // 🌟 2. ดึงข้อมูลมูลนิธิทั้งหมดมาเก็บไว้ใน List แบบเบื้องหลัง
+  void _fetchFoundationsForSearch() {
+    FirebaseFirestore.instance.collection('Foundations').snapshots().listen((snapshot) {
+      if (mounted) {
+        setState(() {
+          _allFoundations = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+        });
+      }
+    });
   }
 
   Future<void> _getUserLocation() async {
@@ -86,7 +109,6 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // 🌟 1. เพิ่มฟังก์ชันคำนวณระยะทาง
   String _calculateDistance(double? targetLat, double? targetLng) {
     if (_currentPosition == null || targetLat == null || targetLng == null) {
       return 'กำลังคำนวณ...'; 
@@ -98,7 +120,6 @@ class _MapScreenState extends State<MapScreen> {
     return '${distanceInKm.toStringAsFixed(1)} Km';
   }
 
-  // 🌟 2. เพิ่มฟังก์ชันแปลงชื่อสิ่งของเป็นไอคอน
   IconData _getIconForCategory(String title) {
     switch (title) {
       case 'เสื้อผ้า': return Icons.checkroom;
@@ -180,8 +201,6 @@ class _MapScreenState extends State<MapScreen> {
                               child: GestureDetector(
                                 onTap: () {
                                   List<String> itemsList = List<String>.from(data['neededItems'] ?? []);
-                                  
-                                  // 🌟 3. เรียกใช้สูตรคำนวณระยะทาง
                                   String calculatedDistance = _calculateDistance(geoPoint.latitude, geoPoint.longitude);
                                   
                                   final detailData = {
@@ -189,7 +208,7 @@ class _MapScreenState extends State<MapScreen> {
                                     'address': data['address'] ?? '',
                                     'rating': data['rating'] ?? '0.0',
                                     'hours': data['hours'] ?? '',
-                                    'distance': calculatedDistance, // ส่งค่าที่คำนวณแล้วไป
+                                    'distance': calculatedDistance,
                                     'isVerified': data['isVerified'] ?? false,
                                     'phone': data['phone'] ?? '',
                                     'facebook': data['facebook'] ?? '',
@@ -198,7 +217,6 @@ class _MapScreenState extends State<MapScreen> {
                                     'mapImage': data['mapImage'] ?? 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=600&auto=format&fit=crop',
                                     'latitude': geoPoint.latitude,
                                     'longitude': geoPoint.longitude,
-                                    // 🌟 4. เรียกใช้ฟังก์ชันแปลงไอคอน
                                     'neededItems': itemsList.map((item) => {
                                       'title': item,
                                       'icon': _getIconForCategory(item), 
@@ -239,28 +257,116 @@ class _MapScreenState extends State<MapScreen> {
               ],
             ),
 
+            // 🌟 3. แถบค้นหา และ รายการแนะนำ (Autocomplete Dropdown)
             Positioned(
               top: 20,
               left: 20,
               right: 20,
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5))],
-                ),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'ค้นหามูลนิธิใกล้ฉัน',
-                    prefixIcon: const Icon(Icons.search, color: Colors.black),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+              child: Column(
+                children: [
+                  Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5))],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value; // อัปเดตคำค้นหาทันทีที่พิมพ์
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'ค้นหามูลนิธิใกล้ฉัน',
+                        prefixIcon: const Icon(Icons.search, color: Colors.black),
+                        // 🌟 ปุ่มกากบาทเพื่อล้างคำค้นหา
+                        suffixIcon: _searchQuery.isNotEmpty 
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.grey),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                                FocusScope.of(context).unfocus(); // ปิดคีย์บอร์ด
+                              },
+                            )
+                          : null,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                      ),
+                    ),
                   ),
-                ),
+                  
+                  // 🌟 4. Dropdown แสดงรายชื่อมูลนิธิที่พิมพ์ตรงกัน
+                  if (_searchQuery.isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 250), // จำกัดความสูงไม่ให้ล้นจอ
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5))],
+                      ),
+                      child: Builder(
+                        builder: (context) {
+                          // กรองรายชื่อมูลนิธิที่มีคำที่พิมพ์อยู่
+                          final filteredList = _allFoundations.where((f) {
+                            final name = (f['name'] ?? '').toString().toLowerCase();
+                            return name.contains(_searchQuery.toLowerCase());
+                          }).toList();
+
+                          if (filteredList.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.all(15.0),
+                              child: Text('ไม่พบมูลนิธิที่คุณค้นหา', style: TextStyle(color: Colors.grey)),
+                            );
+                          }
+
+                          return ListView.separated(
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            itemCount: filteredList.length,
+                            separatorBuilder: (context, index) => const Divider(height: 1, color: Colors.black12),
+                            itemBuilder: (context, index) {
+                              final data = filteredList[index];
+                              return ListTile(
+                                leading: Icon(Icons.location_on, color: primaryBlue),
+                                title: Text(data['name'] ?? 'ไม่มีชื่อ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text(
+                                  data['address'] ?? '', 
+                                  maxLines: 1, 
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                onTap: () {
+                                  // 🌟 5. เมื่อผู้ใช้กดเลือกมูลนิธิ
+                                  FocusScope.of(context).unfocus(); // ปิดคีย์บอร์ด
+                                  _searchController.text = data['name'] ?? ''; // ใส่ชื่อลงในช่องค้นหา
+                                  setState(() {
+                                    _searchQuery = ''; // ปิด Dropdown
+                                  });
+                                  
+                                  // เลื่อนแผนที่ไปหามูลนิธินั้นทันที
+                                  GeoPoint? geoPoint = data['location'];
+                                  if (geoPoint != null) {
+                                    _mapController.move(LatLng(geoPoint.latitude, geoPoint.longitude), 16.0);
+                                  }
+                                },
+                              );
+                            },
+                          );
+                        }
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
 
+            // ปุ่มกลับไปตำแหน่งปัจจุบัน
             Positioned(
               bottom: 20,
               right: 20,
