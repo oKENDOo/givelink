@@ -156,9 +156,12 @@ void _showEditBottomSheet({
     required String currentValue,
     required bool isPassword,
     required Function(String) onSave,
-    int? maxLength, // 🌟 1. เพิ่มตัวรับค่า maxLength เข้ามา
+    int? maxLength, 
   }) {
+    // Controller สำหรับช่องแรก (ชื่อ, อีเมล หรือ รหัสผ่านใหม่)
     final TextEditingController controller = TextEditingController(text: isPassword ? '' : currentValue);
+    // 🌟 Controller สำหรับช่องที่ 2 (ยืนยันรหัสผ่าน)
+    final TextEditingController confirmController = TextEditingController(); 
 
     showModalBottomSheet(
       context: context,
@@ -184,12 +187,14 @@ void _showEditBottomSheet({
                 ],
               ),
               const SizedBox(height: 24),
+              
+              // 🌟 ช่องกรอกข้อมูลที่ 1
               TextField(
                 controller: controller,
                 obscureText: isPassword,
-                maxLength: maxLength, // 🌟 2. ใส่ maxLength ให้ TextField
+                maxLength: maxLength, 
                 decoration: InputDecoration(
-                  counterText: '', // 🌟 3. ซ่อนตัวเลข 0/12 เพื่อความสวยงาม
+                  counterText: '', 
                   filled: true,
                   fillColor: Colors.white,
                   hintText: isPassword ? 'ป้อนรหัสผ่านใหม่' : '',
@@ -201,14 +206,50 @@ void _showEditBottomSheet({
                   ),
                 ),
               ),
+              
+              // 🌟 สร้างช่องกรอกข้อมูลที่ 2 (โชว์เฉพาะตอนแก้รหัสผ่าน)
+              if (isPassword) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: confirmController,
+                  obscureText: true, // ปิดบังตัวอักษรเสมอ
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white,
+                    hintText: 'ยืนยันรหัสผ่านใหม่อีกครั้ง',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.cancel, color: Colors.black),
+                      onPressed: () => confirmController.clear(),
+                    ),
+                  ),
+                ),
+              ],
+              
               const SizedBox(height: 24),
+              
+              // ปุ่มบันทึก
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
                   onPressed: () {
+                    // 🌟 ตรวจสอบความถูกต้องถ้านี่คือหน้าเปลี่ยนรหัสผ่าน
+                    if (isPassword) {
+                      if (controller.text.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร')));
+                        return; // หยุดการทำงาน ไม่ปิดหน้าต่าง
+                      }
+                      if (controller.text != confirmController.text) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('รหัสผ่านไม่ตรงกัน กรุณาลองใหม่')));
+                        return; // หยุดการทำงาน ไม่ปิดหน้าต่าง
+                      }
+                    }
+
+                    // ถ้าผ่านทุกเงื่อนไข หรือเป็นแค่การเปลี่ยนชื่อ/อีเมล ให้ทำการ Save
                     onSave(controller.text.trim());
-                    Navigator.pop(sheetContext);
+                    Navigator.pop(sheetContext); // ปิดหน้าต่าง
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,

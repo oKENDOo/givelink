@@ -19,7 +19,7 @@ class DonationSuccessScreen extends StatelessWidget {
               children: [
                 // --- โลโก้ ---
                 Image.asset(
-                  'assets/images/logo_crop.png', // เปลี่ยนเป็นรูปโลโก้ของคุณ
+                  'assets/images/logo_crop.png', 
                   width: 140,
                   height: 140,
                 ),
@@ -43,8 +43,13 @@ class DonationSuccessScreen extends StatelessWidget {
                   height: 60,
                   child: ElevatedButton(
                     onPressed: () {
-                      // 🌟 กดแล้วพุ่งไปหน้าประวัติ (History) ทันที
-                      context.push('/history');
+                      // 🌟 1. สั่งให้ Tab บริจาค "กดย้อนกลับ" (Pop) รัวๆ จนกว่าจะถึงหน้าแรก (/donation_start)
+                      while (context.canPop()) {
+                        context.pop();
+                      }
+                      
+                      // 🌟 2. เมื่อล้างหน้าจอเสร็จแล้ว ค่อยสั่งให้สลับไปที่หน้าประวัติ (History)
+                      context.go('/history');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryTeal,

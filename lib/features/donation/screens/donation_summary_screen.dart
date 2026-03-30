@@ -1,6 +1,9 @@
 import 'dart:io';
+import 'dart:convert'; // 🌟 สำหรับแปลง JSON จาก ImgBB
+import 'package:http/http.dart' as http; // 🌟 สำหรับเรียก API ImgBB
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // 🌟 สำหรับดึง user_id
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:geolocator/geolocator.dart'; 
 
@@ -28,8 +31,10 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
   final Color primaryTeal = const Color(0xFF64B5C7);
 
   Map<String, dynamic>? foundationData;
+  String? foundationId; // 🌟 เก็บ foundation_id ไว้ใช้ตอนบันทึก
   String calculatedDistance = 'กำลังคำนวณ...';
   bool isLoadingFoundation = true;
+  bool isSaving = false; // 🌟 ตัวแปรเช็คสถานะตอนกำลังกดบันทึก
 
   @override
   void initState() {
@@ -47,6 +52,7 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
 
       if (snapshot.docs.isNotEmpty) {
         foundationData = snapshot.docs.first.data();
+        foundationId = snapshot.docs.first.id; // 🌟 เก็บ ID ของมูลนิธินี้ไว้
       }
 
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -83,6 +89,91 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
     }
   }
 
+  // 🌟 ฟังก์ชันอัปโหลดรูปภาพ 1 รูปไปที่ ImgBB
+  Future<String?> _uploadSingleImageToImgBB(File imageFile) async {
+    const String apiKey = "0f95841b75294557c99590bce575a91d"; 
+    final Uri url = Uri.parse('https://api.imgbb.com/1/upload?key=$apiKey');
+    final request = http.MultipartRequest('POST', url);
+    request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+
+    try {
+      final response = await request.send().timeout(const Duration(seconds: 15));
+      final responseData = await response.stream.bytesToString();
+      final jsonResult = jsonDecode(responseData);
+
+      if (jsonResult['success']) {
+        return jsonResult['data']['url']; 
+      }
+    } catch (e) {
+      debugPrint("Error uploading image: $e");
+    }
+    return null;
+  }
+
+  // 🌟 ฟังก์ชันหลักสำหรับบันทึกข้อมูลการจอง
+  Future<void> _submitDonationBooking() async {
+    // 1. เช็คความพร้อมของข้อมูลสำคัญ
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณาล็อกอินก่อนทำการบริจาค')));
+      return;
+    }
+    if (foundationId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ไม่พบข้อมูลมูลนิธินี้ในระบบ')));
+      return;
+    }
+
+    // 2. โชว์สถานะกำลังโหลดป้องกันผู้ใช้กดเบิ้ล
+    setState(() { isSaving = true; });
+
+    try {
+      // 3. วนลูปอัปโหลดรูปภาพทั้งหมดทีละรูป และเก็บ URL ไว้ใน List
+      List<String> uploadedImageUrls = [];
+      for (var image in widget.selectedImages) {
+        if (image is File) {
+          String? url = await _uploadSingleImageToImgBB(image);
+          if (url != null) {
+            uploadedImageUrls.add(url);
+          }
+        }
+      }
+
+      // 4. เตรียมชุดข้อมูล (Schema) ที่จะโยนเข้า Firebase
+      final bookingData = {
+        'user_id': user.uid,
+        'foundation_id': foundationId,
+        'foundation_name': widget.foundationName,
+        'selected_categories': widget.selectedCategories.map((e) => e.toString()).toList(),
+        'others_text': widget.othersText,
+        'donation_date': widget.selectedDate != null ? Timestamp.fromDate(widget.selectedDate!) : FieldValue.serverTimestamp(),
+        'item_image_urls': uploadedImageUrls, // เก็บลิงก์ที่อัปโหลดสำเร็จแล้ว
+        'status': 'pending', // สถานะเริ่มต้นคือรอดำเนินการ
+        'created_at': FieldValue.serverTimestamp(), // เวลาปัจจุบันที่กดยืนยัน
+      };
+
+      // 5. ส่งข้อมูลขึ้น Firebase Collection 'DonationBookings' (ถ้าไม่มีมันจะสร้างให้เอง)
+      final docRef = await FirebaseFirestore.instance.collection('DonationBookings').add(bookingData);
+      
+      // 6. อัปเดตข้อมูล booking_id กลับเข้าไปในเอกสารตัวมันเอง
+      await docRef.update({'booking_id': docRef.id});
+
+      // 7. สำเร็จ! พยายามเปลี่ยนหน้าไปที่หน้า Success
+      if (mounted) {
+        setState(() { isSaving = false; });
+        context.push('/donation_success');
+      }
+
+    } catch (e) {
+      // กรณีมีข้อผิดพลาด
+      debugPrint('Error saving booking: $e');
+      if (mounted) {
+        setState(() { isSaving = false; });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่')));
+      }
+    }
+  }
+
+  // (ส่วนฟังก์ชัน UI ด้านล่าง ยังคงเหมือนเดิม ไม่ต้องเปลี่ยนครับ)
   IconData _getIconForCategory(String title) {
     switch (title) {
       case 'เสื้อผ้า': return Icons.checkroom;
@@ -231,24 +322,31 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
                     ),
                     const SizedBox(height: 40),
 
+                    // 🌟 ปุ่มยืนยันข้อมูล
                     SizedBox(
                       width: double.infinity,
                       height: 65,
                       child: ElevatedButton(
-                        onPressed: () {
-                          context.push('/donation_success');
-                        },
+                        // 🌟 ถ้าระบบกำลังเซฟอยู่ ให้ปิดการกดซ้ำ และถ้าไม่ใช่ก็ให้เรียกฟังก์ชันบันทึก
+                        onPressed: isSaving ? null : _submitDonationBooking,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryTeal,
+                          disabledBackgroundColor: Colors.grey.shade400, // สีปุ่มตอนกำลังโหลด
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('ยืนยันข้อมูล', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                            SizedBox(width: 15),
-                            Icon(Icons.arrow_circle_right_outlined, color: Colors.white, size: 30),
+                            // 🌟 ถ้ากำลังเซฟอยู่ โชว์วงกลมหมุนๆ ถ้าไม่ใช่โชว์ข้อความปกติ
+                            isSaving 
+                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                              : const Text('ยืนยันข้อมูล', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                            
+                            if (!isSaving) ...[
+                              const SizedBox(width: 15),
+                              const Icon(Icons.arrow_circle_right_outlined, color: Colors.white, size: 30),
+                            ]
                           ],
                         ),
                       ),
@@ -301,7 +399,6 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🌟 ปรับให้ติ๊กถูกติดกับชื่อ
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

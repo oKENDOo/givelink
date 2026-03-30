@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:firebase_auth/firebase_auth.dart'; 
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -9,6 +11,19 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   final Color primaryBlue = const Color(0xFF64B5C7);
+  final User? currentUser = FirebaseAuth.instance.currentUser;
+
+  // 🌟 ฟังก์ชันแปลงวันที่จาก Firebase ให้เป็นภาษาไทย
+  String _formatThaiDate(Timestamp? timestamp) {
+    if (timestamp == null) return 'ไม่ระบุวันที่';
+    DateTime date = timestamp.toDate();
+    final List<String> thaiMonths = [
+      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+    final int buddhistYear = date.year + 543;
+    return 'วันที่ ${date.day} ${thaiMonths[date.month - 1]} $buddhistYear';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +34,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
-          automaticallyImplyLeading: false, // ปิดปุ่มย้อนกลับอัตโนมัติ (เพราะเราใช้ Nav bar ด้านล่างแทน)
+          automaticallyImplyLeading: false, 
           title: const Text(
             'ประวัติการบริจาค',
             style: TextStyle(
@@ -29,9 +44,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
           ),
           bottom: const TabBar(
-            labelColor: Colors.black, // สีของ Tab ที่ถูกเลือก
-            unselectedLabelColor: Colors.grey, // สีของ Tab ที่ไม่ได้เลือก
-            indicatorColor: Colors.black, // สีเส้นขีดด้านล่าง
+            labelColor: Colors.black, 
+            unselectedLabelColor: Colors.grey, 
+            indicatorColor: Colors.black, 
             labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
             tabs: [
@@ -42,44 +57,115 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
         ),
         
-        // --- ส่วนเนื้อหาของแต่ละ Tab ---
-        body: TabBarView(
-          children: [
-            // Tab 1: กำลังดำเนินการ (มีข้อมูล 1 รายการ)
-            ListView(
-              padding: const EdgeInsets.all(20),
+        // 🌟 ใช้ StreamBuilder เพื่อดึงข้อมูลจาก Firebase แบบ Real-time
+        body: StreamBuilder<QuerySnapshot>(
+          // ดึงเฉพาะข้อมูลของ User คนปัจจุบัน
+          stream: FirebaseFirestore.instance
+              .collection('DonationBookings')
+              .where('user_id', isEqualTo: currentUser?.uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator(color: primaryBlue));
+            }
+            
+            if (snapshot.hasError) {
+              return const Center(child: Text('เกิดข้อผิดพลาดในการดึงข้อมูล'));
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return TabBarView(
+                children: [
+                  _buildEmptyState('คุณยังไม่มีการบริจาคที่กำลังดำเนินการ'),
+                  _buildEmptyState('คุณยังไม่มีการบริจาคที่เสร็จสิ้น'),
+                  _buildEmptyState('คุณยังไม่มีการบริจาคที่ถูกยกเลิก/ล้มเหลว'),
+                ],
+              );
+            }
+
+            // ดึงข้อมูลออกมาทั้งหมด และนำมาเรียงลำดับให้ "อันใหม่ล่าสุดอยู่บนสุด"
+            List<QueryDocumentSnapshot> allDocs = snapshot.data!.docs.toList();
+            allDocs.sort((a, b) {
+              Timestamp? timeA = (a.data() as Map<String, dynamic>)['created_at'];
+              Timestamp? timeB = (b.data() as Map<String, dynamic>)['created_at'];
+              if (timeA == null || timeB == null) return 0;
+              return timeB.compareTo(timeA); 
+            });
+
+            // แยกรายการตามสถานะ
+            final pendingDocs = allDocs.where((doc) => doc['status'] == 'pending').toList();
+            final completedDocs = allDocs.where((doc) => doc['status'] == 'completed' || doc['status'] == 'success').toList();
+            final cancelledDocs = allDocs.where((doc) => doc['status'] == 'cancelled' || doc['status'] == 'cancel').toList();
+
+            return TabBarView(
               children: [
-                _buildDonationItem(
-                  title: 'มูลนิธิกระจกเงา',
-                  address: '126/14 ซอยอนุบาล อำเภอเมือง\nจังหวัดแรคคูล',
-                  date: 'วันที่ 28 กุมภาพันธ์ 2569',
-                  onTap: () {
-                    // TODO: นำทางไปหน้ารายละเอียดเมื่อกดปุ่ม "เพิ่มเติม"
-                  },
-                ),
+                _buildListView(pendingDocs, 'คุณยังไม่มีการบริจาคที่กำลังดำเนินการ'),
+                _buildListView(completedDocs, 'คุณยังไม่มีการบริจาคที่เสร็จสิ้น'),
+                _buildListView(cancelledDocs, 'คุณยังไม่มีการบริจาคที่ถูกยกเลิก/ล้มเหลว'),
               ],
-            ),
-
-            // Tab 2: เสร็จสิ้น (หน้าว่าง)
-            _buildEmptyState('คุณยังไม่มีการบริจาคที่เสร็จสิ้นในตอนนี้'),
-
-            // Tab 3: ยกเลิก/ล้มเหลว (หน้าว่าง)
-            _buildEmptyState('คุณยังไม่มีการบริจาคที่ถูกยกเลิก/ล้มเหลวในตอนนี้'),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  // --- Widget สำหรับสร้างรายการบริจาค ---
+  // --- Widget สำหรับสร้าง List ของแต่ละ Tab ---
+  Widget _buildListView(List<QueryDocumentSnapshot> docs, String emptyMessage) {
+    if (docs.isEmpty) {
+      return _buildEmptyState(emptyMessage);
+    }
+    
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: docs.length,
+      itemBuilder: (context, index) {
+        final data = docs[index].data() as Map<String, dynamic>;
+        
+        String foundationName = data['foundation_name'] ?? 'ไม่ระบุชื่อมูลนิธิ';
+        
+        // 🌟 ดึงข้อมูลสิ่งของมาโชว์แทนที่อยู่
+        List<dynamic> categories = data['selected_categories'] ?? [];
+        String others = data['others_text'] ?? '';
+        // 🌟 เพิ่ม .replaceAll('\n', '') เพื่อลบการปัดบรรทัดออกให้หมด
+        List<String> allItems = categories.map((e) => e.toString().replaceAll('\n', '')).toList();
+        if (others.isNotEmpty) allItems.add(others);
+        
+        // 🌟 ลอจิกใหม่: ถ้ายาวเกิน 2 อย่าง ให้ใส่ +ด้านหลัง
+        String itemsText = 'ไม่ระบุ';
+        if (allItems.isNotEmpty) {
+          if (allItems.length <= 2) {
+            itemsText = ' ${allItems.join(', ')}';
+          } else {
+            itemsText = ' ${allItems.take(2).join(', ')} +${allItems.length - 2}';
+          }
+        }
+        
+        // ดึงวันที่
+        String dateText = _formatThaiDate(data['donation_date']);
+
+        return _buildDonationItem(
+          title: foundationName,
+          subtitle: itemsText, 
+          date: dateText,
+          onTap: () {
+            // TODO: นำทางไปหน้ารายละเอียดการจอง
+            debugPrint('กดดูรายละเอียด Booking ID: ${data['booking_id']}');
+          },
+        );
+      },
+    );
+  }
+
+  // --- Widget สำหรับสร้างการ์ดรายการบริจาค ---
   Widget _buildDonationItem({
     required String title,
-    required String address,
+    required String subtitle,
     required String date,
     required VoidCallback onTap,
   }) {
     return Container(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 16, top: 8),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Colors.grey.shade300, width: 1)),
       ),
@@ -98,17 +184,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.location_on, size: 16, color: Colors.black87),
-                    const SizedBox(width: 4),
+                    const Icon(Icons.card_giftcard, size: 16, color: Colors.black54),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        address,
+                        subtitle,
                         style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.2),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -149,7 +235,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // ใช้ไอคอนแทนโลโก้ชั่วคราว (ถ้ามีรูปโลโก้สามารถเปลี่ยนเป็น Image.asset ได้เลย)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -167,5 +252,4 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     );
   }
-
 }
