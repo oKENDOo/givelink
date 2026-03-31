@@ -24,7 +24,8 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
   File? _pickedImage;
   
   Timer? _emailCheckTimer; 
-  bool _isLoggingOut = false; // 🌟 ป้องกันการทำงานซ้ำซ้อนตอนกำลัง Logout
+  bool _isLoggingOut = false;
+  bool _isPickingImage = false; // 🌟 1. เพิ่มตัวแปรนี้เข้ามาเพื่อกันการกดเบิ้ล
 
   @override
   void initState() {
@@ -47,18 +48,16 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
     }
   }
 
-  // 🌟 ฟังก์ชันจัดการการแจ้งเตือนแบบ Pop-up และหน่วงเวลา 5 วินาที!
   Future<void> _triggerSuccessAndLogout(String message) async {
-    if (_isLoggingOut) return; // ถ้ากำลังออกอยู่แล้ว ห้ามทำซ้ำ
+    if (_isLoggingOut) return; 
     setState(() => _isLoggingOut = true);
     
     _emailCheckTimer?.cancel();
     if (!mounted) return;
 
-    // 1. โชว์ Dialog กลางหน้าจอ บังคับผู้ใช้ดูข้อความ 5 วินาที
     showDialog(
       context: context,
-      barrierDismissible: false, // ห้ามกดพื้นที่รอบนอกเพื่อปิด
+      barrierDismissible: false, 
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Column(
@@ -78,13 +77,11 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
       ),
     );
 
-    // 2. หน่วงเวลา 5 วินาทีเป๊ะๆ ตามคำขอ
     await Future.delayed(const Duration(seconds: 5));
 
-    // 3. Logout และเปลี่ยนหน้า
     await FirebaseAuth.instance.signOut();
     if (mounted) {
-      Navigator.of(context, rootNavigator: true).pop(); // ปิด Dialog
+      Navigator.of(context, rootNavigator: true).pop(); 
       context.go('/welcome');
     }
   }
@@ -98,13 +95,11 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
 
       if (user != null && mounted) {
         if (user!.email != email) {
-          // ถ้าอีเมลเปลี่ยนสำเร็จ
           await _triggerSuccessAndLogout('อัปเดตอีเมลสำเร็จ!\nระบบจะพากลับไปหน้าต้อนรับใน 5 วินาที...');
         }
       }
     } catch (e) {
       debugPrint("Error reloading user data: $e");
-      // 🌟 ดักจับ Error: ถ้ามี Error ตอนที่ Timer กำลังทำงาน แปลว่า Firebase เตะ Session ออกเพราะเมลเปลี่ยนสำเร็จ!
       if (_emailCheckTimer != null && _emailCheckTimer!.isActive) {
         await _triggerSuccessAndLogout('อัปเดตอีเมลสำเร็จ!\nระบบจะพากลับไปหน้าต้อนรับใน 5 วินาที...');
       } else {
@@ -159,92 +154,103 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
     }
   }
 
-  void _showImagePickerSheet() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+ void _showImagePickerSheet() async {
+    // 🌟 2. ถ้ากำลังดึงรูปอยู่ ให้หยุดการทำงานรอบนี้ไปเลย (ป้องกันกดเบิ้ล)
+    if (_isPickingImage) return; 
+    _isPickingImage = true; // ล็อคสถานะไว้ว่ากำลังเปิดแกลลอรี่
 
-    if (image == null || !mounted) return;
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
+      _isPickingImage = false; // 🌟 3. เมื่อดึงรูปเสร็จ (หรือกดยกเลิก) ให้ปลดล็อคทันที
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: primaryTeal,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const SizedBox(width: 24),
-                const Text('แก้ไขรูปโปรไฟล์', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                GestureDetector(onTap: () => Navigator.pop(sheetContext), child: const Icon(Icons.close, color: Colors.black, size: 28)),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: 200, height: 200,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                image: DecorationImage(image: FileImage(File(image.path)), fit: BoxFit.cover),
+      if (image == null || !mounted) return;
+
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: primaryTeal,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 24),
+                  const Text('แก้ไขรูปโปรไฟล์', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  GestureDetector(onTap: () => Navigator.pop(sheetContext), child: const Icon(Icons.close, color: Colors.black, size: 28)),
+                ],
               ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(sheetContext);
+              const SizedBox(height: 20),
+              Container(
+                width: 200, height: 200,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  image: DecorationImage(image: FileImage(File(image.path)), fit: BoxFit.cover),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(sheetContext);
 
-                  setState(() {
-                    _pickedImage = File(image.path);
-                  });
+                    setState(() {
+                      _pickedImage = File(image.path);
+                    });
 
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(content: Text('กำลังบันทึกรูปโปรไฟล์เบื้องหลัง... สามารถใช้งานแอปต่อได้เลยครับ')),
-                  );
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(content: Text('กำลังบันทึกรูปโปรไฟล์เบื้องหลัง... สามารถใช้งานแอปต่อได้เลยครับ')),
+                    );
 
-                  _uploadToImgBB(File(image.path)).then((imageUrl) async {
-                    if (imageUrl != null) {
-                      await user?.updatePhotoURL(imageUrl);
-                      
-                      if (mounted) {
-                        setState(() {
-                          photoUrl = imageUrl;
-                        });
+                    _uploadToImgBB(File(image.path)).then((imageUrl) async {
+                      if (imageUrl != null) {
+                        await user?.updatePhotoURL(imageUrl);
+                        
+                        if (mounted) {
+                          setState(() {
+                            photoUrl = imageUrl;
+                          });
+                        }
+                        
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('อัปเดตรูปโปรไฟล์เสร็จสมบูรณ์!'),
+                            backgroundColor: Colors.green, 
+                          )
+                        );
+                      } else {
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('อัปโหลดรูปล้มเหลว กรุณาลองใหม่'),
+                            backgroundColor: Colors.red,
+                          )
+                        );
                       }
-                      
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('อัปเดตรูปโปรไฟล์เสร็จสมบูรณ์!'),
-                          backgroundColor: Colors.green, 
-                        )
-                      );
-                    } else {
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('อัปโหลดรูปล้มเหลว กรุณาลองใหม่'),
-                          backgroundColor: Colors.red,
-                        )
-                      );
-                    }
-                  });
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                child: const Text('บันทึกรูปภาพ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  child: const Text('บันทึกรูปภาพ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      _isPickingImage = false; // 🌟 4. ถ้าเกิด Error อะไรขึ้นมา ก็อย่าลืมปลดล็อคด้วย
+      debugPrint("Error picking image: $e");
+    }
   }
 
   void _showEditBottomSheet({
@@ -535,7 +541,6 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
     try {
       await user?.updatePassword(newPassword);
       if (mounted) {
-        // 🌟 เรียกใช้ฟังก์ชันให้มันเด้ง Pop-up ค้าง 5 วิได้เลย!
         await _triggerSuccessAndLogout('เปลี่ยนรหัสผ่านสำเร็จ!\nระบบจะพากลับไปหน้าต้อนรับใน 5 วินาที...');
       }
     } catch (e) {
@@ -564,35 +569,37 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
             
             // --- 1. รูปโปรไฟล์ และ ปุ่มแก้ไขรูป ---
             Center(
-              child: Column(
-                children: [
-                  Container(
-                    width: 110,
-                    height: 110,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      shape: BoxShape.circle,
+              // 🌟 ครอบ GestureDetector ไว้ที่ Column นี้เลย เพื่อให้กดได้ทั้งรูปและตัวหนังสือ
+              child: GestureDetector(
+                onTap: _showImagePickerSheet,
+                behavior: HitTestBehavior.opaque, // เพื่อให้กดพื้นที่ว่างระหว่างรูปกับตัวอักษรได้ด้วย
+                child: Column(
+                  children: [
+                    Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        shape: BoxShape.circle,
+                      ),
+                      child: ClipOval(
+                        child: _pickedImage != null 
+                          ? Image.file(_pickedImage!, fit: BoxFit.cover)
+                          : (photoUrl != null && photoUrl!.isNotEmpty)
+                              ? Image.network(
+                                  photoUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 60, color: Colors.grey),
+                                )
+                              : Image.network(
+                                  'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 60, color: Colors.grey),
+                                ),
+                      ),
                     ),
-                    child: ClipOval(
-                      child: _pickedImage != null 
-                        ? Image.file(_pickedImage!, fit: BoxFit.cover)
-                        : (photoUrl != null && photoUrl!.isNotEmpty)
-                            ? Image.network(
-                                photoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 60, color: Colors.grey),
-                              )
-                            : Image.network(
-                                'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 60, color: Colors.grey),
-                              ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: _showImagePickerSheet,
-                    child: Row(
+                    const SizedBox(height: 10),
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
                         Icon(Icons.image, size: 20, color: Colors.black87),
@@ -600,8 +607,8 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
                         Text('แก้ไข', style: TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.bold)),
                       ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 40),
