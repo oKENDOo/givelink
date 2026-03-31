@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-
 
 class UserEditInfoScreen extends StatefulWidget {
   const UserEditInfoScreen({super.key});
@@ -14,7 +14,7 @@ class UserEditInfoScreen extends StatefulWidget {
   State<UserEditInfoScreen> createState() => _UserEditInfoScreenState();
 }
 
-class _UserEditInfoScreenState extends State<UserEditInfoScreen> {
+class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBindingObserver {
   final Color primaryTeal = const Color(0xFF64B5C7);
   
   User? user;
@@ -22,11 +22,106 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> {
   String email = '';
   String? photoUrl;
   File? _pickedImage;
+  
+  Timer? _emailCheckTimer; 
+  bool _isLoggingOut = false; // 🌟 ป้องกันการทำงานซ้ำซ้อนตอนกำลัง Logout
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); 
     _loadUserData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); 
+    _emailCheckTimer?.cancel(); 
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshUserData();
+    }
+  }
+
+  // 🌟 ฟังก์ชันจัดการการแจ้งเตือนแบบ Pop-up และหน่วงเวลา 5 วินาที!
+  Future<void> _triggerSuccessAndLogout(String message) async {
+    if (_isLoggingOut) return; // ถ้ากำลังออกอยู่แล้ว ห้ามทำซ้ำ
+    setState(() => _isLoggingOut = true);
+    
+    _emailCheckTimer?.cancel();
+    if (!mounted) return;
+
+    // 1. โชว์ Dialog กลางหน้าจอ บังคับผู้ใช้ดูข้อความ 5 วินาที
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ห้ามกดพื้นที่รอบนอกเพื่อปิด
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 60),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF64B5C7))),
+          ],
+        ),
+      ),
+    );
+
+    // 2. หน่วงเวลา 5 วินาทีเป๊ะๆ ตามคำขอ
+    await Future.delayed(const Duration(seconds: 5));
+
+    // 3. Logout และเปลี่ยนหน้า
+    await FirebaseAuth.instance.signOut();
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop(); // ปิด Dialog
+      context.go('/welcome');
+    }
+  }
+
+  Future<void> _refreshUserData() async {
+    if (_isLoggingOut) return;
+
+    try {
+      await user?.reload();
+      user = FirebaseAuth.instance.currentUser;
+
+      if (user != null && mounted) {
+        if (user!.email != email) {
+          // ถ้าอีเมลเปลี่ยนสำเร็จ
+          await _triggerSuccessAndLogout('อัปเดตอีเมลสำเร็จ!\nระบบจะพากลับไปหน้าต้อนรับใน 5 วินาที...');
+        }
+      }
+    } catch (e) {
+      debugPrint("Error reloading user data: $e");
+      // 🌟 ดักจับ Error: ถ้ามี Error ตอนที่ Timer กำลังทำงาน แปลว่า Firebase เตะ Session ออกเพราะเมลเปลี่ยนสำเร็จ!
+      if (_emailCheckTimer != null && _emailCheckTimer!.isActive) {
+        await _triggerSuccessAndLogout('อัปเดตอีเมลสำเร็จ!\nระบบจะพากลับไปหน้าต้อนรับใน 5 วินาที...');
+      } else {
+        _emailCheckTimer?.cancel();
+        if (mounted && !_isLoggingOut) {
+          await FirebaseAuth.instance.signOut();
+          context.go('/welcome');
+        }
+      }
+    }
+  }
+
+  void _startEmailCheckTimer() {
+    _emailCheckTimer?.cancel(); 
+    _emailCheckTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _refreshUserData();
+    });
   }
 
   void _loadUserData() {
@@ -40,7 +135,6 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> {
     }
   }
 
-  // 🌟 ฟังก์ชันอัปโหลดรูปไป ImgBB (ใส่ timeout ป้องกันเน็ตค้าง)
   Future<String?> _uploadToImgBB(File imageFile) async {
     const String apiKey = "0f95841b75294557c99590bce575a91d"; 
     
@@ -49,7 +143,6 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> {
     request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
 
     try {
-      // เพิ่ม timeout 15 วินาที ป้องกันโหลดไม่รู้จบ
       final response = await request.send().timeout(const Duration(seconds: 15));
       final responseData = await response.stream.bytesToString();
       final jsonResult = jsonDecode(responseData);
@@ -66,14 +159,12 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> {
     }
   }
 
-  // 🌟 แก้ไขฟังก์ชันจัดการเลือกรูป (แก้บั๊ก Context และ BottomSheet)
   void _showImagePickerSheet() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image == null || !mounted) return;
 
-    // 🌟 จำ Messenger ของหน้าหลักไว้ก่อน (เพื่อให้ SnackBar ไม่พังตอน BottomSheet ปิด)
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     showModalBottomSheet(
@@ -109,37 +200,42 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> {
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: () async {
-                  // 1. ปิด Bottom Sheet ก่อน (ใช้ sheetContext)
+                onPressed: () {
                   Navigator.pop(sheetContext);
 
-                  // 2. โชว์กล่องโหลดติ้วๆ (ใช้ context หน้าหลัก)
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (dialogContext) => const Center(child: CircularProgressIndicator()),
+                  setState(() {
+                    _pickedImage = File(image.path);
+                  });
+
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(content: Text('กำลังบันทึกรูปโปรไฟล์เบื้องหลัง... สามารถใช้งานแอปต่อได้เลยครับ')),
                   );
 
-                  // 3. เริ่มอัปโหลดรูป
-                  String? imageUrl = await _uploadToImgBB(File(image.path));
-
-                  // 4. อัปโหลดเสร็จแล้ว ให้ปิดกล่องโหลดติ้วๆ
-                  if (context.mounted) {
-                    Navigator.pop(context); 
-                  }
-
-                  // 5. สรุปผล
-                  if (imageUrl != null) {
-                    await user?.updatePhotoURL(imageUrl);
-                    setState(() {
-                      _pickedImage = File(image.path);
-                      photoUrl = imageUrl;
-                    });
-                    // ใช้ messenger ที่จำไว้ตั้งแต่แรก ปลอดภัย 100%
-                    scaffoldMessenger.showSnackBar(const SnackBar(content: Text('อัปเดตรูปโปรไฟล์สำเร็จ!')));
-                  } else {
-                    scaffoldMessenger.showSnackBar(const SnackBar(content: Text('อัปโหลดรูปล้มเหลว กรุณาลองใหม่')));
-                  }
+                  _uploadToImgBB(File(image.path)).then((imageUrl) async {
+                    if (imageUrl != null) {
+                      await user?.updatePhotoURL(imageUrl);
+                      
+                      if (mounted) {
+                        setState(() {
+                          photoUrl = imageUrl;
+                        });
+                      }
+                      
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('อัปเดตรูปโปรไฟล์เสร็จสมบูรณ์!'),
+                          backgroundColor: Colors.green, 
+                        )
+                      );
+                    } else {
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('อัปโหลดรูปล้มเหลว กรุณาลองใหม่'),
+                          backgroundColor: Colors.red,
+                        )
+                      );
+                    }
+                  });
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 child: const Text('บันทึกรูปภาพ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -151,16 +247,14 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> {
     );
   }
 
-void _showEditBottomSheet({
+  void _showEditBottomSheet({
     required String title,
     required String currentValue,
     required bool isPassword,
     required Function(String) onSave,
     int? maxLength, 
   }) {
-    // Controller สำหรับช่องแรก (ชื่อ, อีเมล หรือ รหัสผ่านใหม่)
     final TextEditingController controller = TextEditingController(text: isPassword ? '' : currentValue);
-    // 🌟 Controller สำหรับช่องที่ 2 (ยืนยันรหัสผ่าน)
     final TextEditingController confirmController = TextEditingController(); 
 
     showModalBottomSheet(
@@ -188,7 +282,6 @@ void _showEditBottomSheet({
               ),
               const SizedBox(height: 24),
               
-              // 🌟 ช่องกรอกข้อมูลที่ 1
               TextField(
                 controller: controller,
                 obscureText: isPassword,
@@ -207,12 +300,11 @@ void _showEditBottomSheet({
                 ),
               ),
               
-              // 🌟 สร้างช่องกรอกข้อมูลที่ 2 (โชว์เฉพาะตอนแก้รหัสผ่าน)
               if (isPassword) ...[
                 const SizedBox(height: 16),
                 TextField(
                   controller: confirmController,
-                  obscureText: true, // ปิดบังตัวอักษรเสมอ
+                  obscureText: true, 
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.white,
@@ -229,27 +321,30 @@ void _showEditBottomSheet({
               
               const SizedBox(height: 24),
               
-              // ปุ่มบันทึก
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
                   onPressed: () {
-                    // 🌟 ตรวจสอบความถูกต้องถ้านี่คือหน้าเปลี่ยนรหัสผ่าน
                     if (isPassword) {
                       if (controller.text.length < 6) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร')));
-                        return; // หยุดการทำงาน ไม่ปิดหน้าต่าง
+                        return; 
                       }
                       if (controller.text != confirmController.text) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('รหัสผ่านไม่ตรงกัน กรุณาลองใหม่')));
-                        return; // หยุดการทำงาน ไม่ปิดหน้าต่าง
+                        return; 
                       }
                     }
 
-                    // ถ้าผ่านทุกเงื่อนไข หรือเป็นแค่การเปลี่ยนชื่อ/อีเมล ให้ทำการ Save
-                    onSave(controller.text.trim());
-                    Navigator.pop(sheetContext); // ปิดหน้าต่าง
+                    String valueToSave = controller.text.trim();
+                    Navigator.pop(sheetContext); 
+                    
+                    Future.delayed(const Duration(milliseconds: 300), () {
+                      if (mounted) {
+                        onSave(valueToSave);
+                      }
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
@@ -272,33 +367,181 @@ void _showEditBottomSheet({
     if (newName.isEmpty) return;
     try {
       await user?.updateDisplayName(newName);
-      setState(() => userName = newName);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('อัปเดตชื่อผู้ใช้สำเร็จ')));
+      if (mounted) {
+        setState(() => userName = newName);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('อัปเดตชื่อผู้ใช้สำเร็จ')));
+      }
     } catch (e) {
       debugPrint("Error updating name: $e");
     }
   }
 
   Future<void> _updateEmail(String newEmail) async {
-    if (newEmail.isEmpty || !newEmail.contains('@')) return;
+    if (newEmail.isEmpty || !newEmail.contains('@') || newEmail == email) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     try {
-      await user?.verifyBeforeUpdateEmail(newEmail); 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ส่งอีเมลยืนยันการเปลี่ยนแปลงไปที่อีเมลใหม่แล้ว')));
+      await user?.verifyBeforeUpdateEmail(newEmail);
+      
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); 
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ส่งลิงก์ยืนยันไปที่อีเมลใหม่แล้ว!\nกรุณาเช็ค Inbox และกดลิงก์เพื่อยืนยัน อีเมลจึงจะถูกเปลี่ยนครับ'),
+            backgroundColor: Colors.green, 
+            duration: Duration(seconds: 5), 
+          )
+        );
+        
+        _startEmailCheckTimer(); 
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); 
+        
+        if (e.code == 'requires-recent-login') {
+          Future.delayed(const Duration(milliseconds: 200), () {
+             _showReAuthDialog(newEmail);
+          });
+        } else if (e.code == 'email-already-in-use') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('อีเมลนี้ถูกใช้งานไปแล้ว กรุณาใช้อีเมลอื่น'), backgroundColor: Colors.orange)
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('เกิดข้อผิดพลาด: ${e.message}'), backgroundColor: Colors.red)
+          );
+        }
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ไม่สามารถเปลี่ยนอีเมลได้ กรุณาล็อกอินใหม่อีกครั้ง')));
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'), backgroundColor: Colors.red)
+        );
+      }
     }
+  }
+
+  void _showReAuthDialog(String newEmail) {
+    final TextEditingController passwordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('ยืนยันตัวตน', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('เพื่อความปลอดภัย กรุณากรอกรหัสผ่านปัจจุบันของคุณเพื่อทำรายการต่อ'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                hintText: 'รหัสผ่านปัจจุบัน',
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey, fontSize: 16)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (passwordController.text.isEmpty) return;
+              Navigator.pop(dialogContext); 
+
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(child: CircularProgressIndicator()),
+              );
+
+              try {
+                AuthCredential credential = EmailAuthProvider.credential(
+                  email: user!.email!,
+                  password: passwordController.text,
+                );
+                await user!.reauthenticateWithCredential(credential);
+
+                await user!.verifyBeforeUpdateEmail(newEmail);
+
+                if (mounted) {
+                  Navigator.of(context, rootNavigator: true).pop(); 
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('ยืนยันตัวตนสำเร็จ!\nส่งลิงก์ยืนยันไปที่อีเมลใหม่แล้ว กรุณาเช็ค Inbox ครับ'),
+                      backgroundColor: Colors.green, 
+                      duration: Duration(seconds: 5), 
+                    )
+                  );
+                  
+                  _startEmailCheckTimer(); 
+                }
+
+              } on FirebaseAuthException catch (e) {
+                if (mounted) {
+                  Navigator.of(context, rootNavigator: true).pop(); 
+                  if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่'), backgroundColor: Colors.red),
+                    );
+                  } else if (e.code == 'email-already-in-use') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('อีเมลนี้ถูกใช้งานไปแล้ว กรุณาใช้อีเมลอื่น'), backgroundColor: Colors.orange),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('เกิดข้อผิดพลาด: ${e.message}'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              } catch (error) {
+                if (mounted) {
+                  Navigator.of(context, rootNavigator: true).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('เกิดข้อผิดพลาด กรุณาลองใหม่'), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: primaryTeal, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('ยืนยัน', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _updatePassword(String newPassword) async {
     if (newPassword.isEmpty || newPassword.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร')));
       return;
     }
     try {
       await user?.updatePassword(newPassword);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('อัปเดตรหัสผ่านสำเร็จ')));
+      if (mounted) {
+        // 🌟 เรียกใช้ฟังก์ชันให้มันเด้ง Pop-up ค้าง 5 วิได้เลย!
+        await _triggerSuccessAndLogout('เปลี่ยนรหัสผ่านสำเร็จ!\nระบบจะพากลับไปหน้าต้อนรับใน 5 วินาที...');
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณาออกจากระบบและเข้าสู่ระบบใหม่อีกครั้งก่อนเปลี่ยนรหัสผ่าน')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณาออกจากระบบและเข้าสู่ระบบใหม่อีกครั้งก่อนเปลี่ยนรหัสผ่าน')));
+      }
     }
   }
 
@@ -323,7 +566,6 @@ void _showEditBottomSheet({
             Center(
               child: Column(
                 children: [
-                  // 🌟 เปลี่ยนมาใช้ ClipOval แทน เพื่อให้รองรับรูปเสีย/รูปไม่มี ได้ดีขึ้น
                   Container(
                     width: 110,
                     height: 110,
@@ -385,7 +627,7 @@ void _showEditBottomSheet({
                       );
                     }),
                     const Divider(height: 1, indent: 16, endIndent: 16),
-                    _buildListTile('อีเมล', email, false, () {
+                    _buildListTile('อีเมล', email.length > 15 ? '${email.substring(0, 15)}...' : email, false, () {
                       _showEditBottomSheet(
                         title: 'แก้ไขอีเมล', 
                         currentValue: email, 

@@ -6,14 +6,12 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // กำหนดสีฟ้าตามแบบ (สามารถปรับแก้รหัสสีให้ตรงเป๊ะได้ภายหลังครับ)
     const Color primaryBlue = Color(0xFF64B5C7); 
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // --- ส่วนบน: โลโก้ ---
           Expanded(
             child: Center(
               child: Image.asset(
@@ -25,14 +23,12 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
           
-          // --- ส่วนล่าง: กล่องสีฟ้า ---
           Container(
             width: double.infinity,
             height: 310,
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
             decoration: const BoxDecoration(
               color: primaryBlue,
-              // ทำมุมโค้งมนที่ขอบบนซ้ายและขวา
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
@@ -40,7 +36,7 @@ class WelcomeScreen extends StatelessWidget {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min, // ให้กล่องสูงเท่าที่จำเป็น
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
                   'ยินดีต้อนรับ!',
@@ -60,14 +56,11 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 40),
                 
-                // --- ปุ่ม 2 ปุ่ม ซ้าย-ขวา ---
                 Row(
                   children: [
-                    // ปุ่มเข้าสู่ระบบ (สีดำ)
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          // ให้ดันหน้า Login ขึ้นมา
                           context.push('/login');
                         },
                         style: ElevatedButton.styleFrom(
@@ -81,12 +74,10 @@ class WelcomeScreen extends StatelessWidget {
                         child: const Text('เข้าสู่ระบบ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    const SizedBox(width: 16), // ระยะห่างระหว่างปุ่ม
-                    // ปุ่มลงทะเบียน (สีขาว)
+                    const SizedBox(width: 16), 
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          // TODO: นำไปหน้า Register
                           context.push('/register');
                         },
                         style: ElevatedButton.styleFrom(

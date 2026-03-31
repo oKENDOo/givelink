@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 🌟 เพิ่ม Import Firestore สำหรับดึงข้อมูล
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -103,64 +103,71 @@ class _UserScreenState extends State<UserScreen> {
           children: [
             const SizedBox(height: 40),
             
-            // --- 1. ส่วนรูปโปรไฟล์และชื่อ ---
-            Center(
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.grey.shade200,
-                    backgroundImage: photoUrl != null 
-                        ? NetworkImage(photoUrl!) 
-                        : const NetworkImage('https://cdn-icons-png.flaticon.com/512/3135/3135715.png') as ImageProvider,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    userName,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // 🌟 จำนวนการบริจาค (ดึงข้อมูลจริงจาก Firestore)
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('DonationBookings')
-                        .where('user_id', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      int donationCount = 0;
+            // --- 1. ส่วนรูปโปรไฟล์และชื่อ (🌟 อัปเดตแบบ Real-time ด้วย StreamBuilder) ---
+            StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.userChanges(),
+              builder: (context, snapshot) {
+                // ดึงข้อมูลผู้ใช้ล่าสุด
+                final currentUser = snapshot.data ?? FirebaseAuth.instance.currentUser;
+                final currentName = currentUser?.displayName ?? currentUser?.email?.split('@')[0] ?? 'ผู้ใช้งาน';
+                final currentPhotoUrl = currentUser?.photoURL;
 
-                      if (snapshot.hasData) {
-                        // กรองนับเฉพาะรายการที่กำลังดำเนินการ และ เสร็จสิ้น
-                        donationCount = snapshot.data!.docs.where((doc) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          final status = data['status'] ?? '';
-                          return  status == 'completed' || status == 'success';
-                        }).length;
-                      }
+                return Center(
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.grey.shade200,
+                        backgroundImage: (currentPhotoUrl != null && currentPhotoUrl.isNotEmpty) 
+                            ? NetworkImage(currentPhotoUrl) 
+                            : const NetworkImage('https://cdn-icons-png.flaticon.com/512/3135/3135715.png') as ImageProvider,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        currentName,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      
+                      // 🌟 จำนวนการบริจาค (ดึงข้อมูลจริงจาก Firestore)
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('DonationBookings')
+                            .where('user_id', isEqualTo: currentUser?.uid)
+                            .snapshots(),
+                        builder: (context, snapshotDonation) {
+                          int donationCount = 0;
 
-                     // ... ส่วน StreamBuilder ด้านบน ...
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // ✅ โค้ดใหม่ (ใช้รูปโลโก้แทนไอคอน)
-                          Image.asset(
-                            'assets/images/logo_crop.png', 
-                            width: 24, // กำหนดความกว้างให้เหมาะสม
-                            height: 24, // กำหนดความสูงให้เหมาะสม
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'จำนวนการบริจาค $donationCount ครั้ง',
-                            style: const TextStyle(fontSize: 14, color: Colors.black87),
-                          ),
-                        ],
-                      );
-// ...
-                    },
+                          if (snapshotDonation.hasData) {
+                            // กรองนับเฉพาะรายการที่กำลังดำเนินการ และ เสร็จสิ้น
+                            donationCount = snapshotDonation.data!.docs.where((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              final status = data['status'] ?? '';
+                              return status == 'completed' || status == 'success';
+                            }).length;
+                          }
+
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/logo_crop.png', 
+                                width: 24, 
+                                height: 24, 
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'จำนวนการบริจาค $donationCount ครั้ง',
+                                style: const TextStyle(fontSize: 14, color: Colors.black87),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              }
             ),
             
             const SizedBox(height: 40),

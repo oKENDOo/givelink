@@ -273,37 +273,52 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => context.go('/user'),
-                    child: Container(
-                      width: 50, height: 50,
-                      decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle),
-                      child: ClipOval(
-                        child: (photoUrl != null && photoUrl!.isNotEmpty)
-                            ? Image.network(photoUrl!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 30, color: Colors.grey))
-                            : Image.network('https://cdn-icons-png.flaticon.com/512/3135/3135715.png', fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 30, color: Colors.grey)),
+              // 🌟 เอา StreamBuilder มาครอบเพื่อดักฟังรูปและชื่อใหม่ๆ
+              StreamBuilder<User?>(
+                stream: FirebaseAuth.instance.userChanges(),
+                builder: (context, snapshot) {
+                  final currentUser = snapshot.data ?? FirebaseAuth.instance.currentUser;
+                  final currentName = currentUser?.displayName ?? currentUser?.email?.split('@')[0] ?? 'ผู้ใช้งาน';
+                  final currentPhotoUrl = currentUser?.photoURL;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => context.go('/user'),
+                            child: Container(
+                              width: 50, height: 50,
+                              decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle),
+                              child: ClipOval(
+                                child: (currentPhotoUrl != null && currentPhotoUrl.isNotEmpty)
+                                    ? Image.network(currentPhotoUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 30, color: Colors.grey))
+                                    : Image.network('https://cdn-icons-png.flaticon.com/512/3135/3135715.png', fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 30, color: Colors.grey)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(currentName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          const Spacer(),
+                          // 🌟 ใส่ Badge สีแดงครอบไอคอนระฆัง
+                          Badge(
+                            isLabelVisible: _recentNotifications.isNotEmpty, 
+                            label: Text(_recentNotifications.length > 9 ? '9+' : '${_recentNotifications.length}'), 
+                            offset: const Offset(-5, 5),
+                            child: IconButton(
+                              onPressed: _showNotificationsSheet, 
+                              icon: const Icon(Icons.notifications_none, color: Colors.black, size: 28),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(userName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const Spacer(),
-                  // 🌟 ใส่ Badge สีแดงครอบไอคอนระฆัง
-                  Badge(
-                    isLabelVisible: _recentNotifications.isNotEmpty, // โชว์จุดแดงถ้ามีแจ้งเตือน
-                    label: Text(_recentNotifications.length > 9 ? '9+' : '${_recentNotifications.length}'), // โชว์ตัวเลข
-                    offset: const Offset(-5, 5),
-                    child: IconButton(
-                      onPressed: _showNotificationsSheet, // 🌟 กดแล้วเปิดหน้าต่างแจ้งเตือน
-                      icon: const Icon(Icons.notifications_none, color: Colors.black, size: 28),
-                    ),
-                  ),
-                ],
+                      const SizedBox(height: 16),
+                      Text('สวัสดี $currentName มาทำความดีกันเถอะ !', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold,color: Color(0xFF64B5C7))),
+                    ],
+                  );
+                }
               ),
-              const SizedBox(height: 16),
-              Text('สวัสดี $userName มาทำความดีกันเถอะ !', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold,color: Color(0xFF64B5C7))),
 
               const SizedBox(height: 20),
 

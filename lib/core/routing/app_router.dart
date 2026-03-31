@@ -27,31 +27,26 @@ import '../../features/main_layout_screen.dart';
 final appRouter = GoRouter(
   initialLocation: '/', 
   routes: [
-    // --- กลุ่มหน้าที่ "ไม่มี" แถบเมนูด้านล่าง (เต็มจอปกติ) ---
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(path: '/welcome', builder: (context, state) => const WelcomeScreen()),
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
 
-    // --- 🌟 กลุ่มหน้าที่ "มี" แถบเมนูด้านล่าง (ถูกครอบด้วย Shell) ---
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return MainLayoutScreen(navigationShell: navigationShell);
       },
       branches: [
-        // 📍 Tab 0: หน้าหลัก
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
           ],
         ),
-        // 📍 Tab 1: แผนที่
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/map', builder: (context, state) => const MapScreen()),
           ],
         ),
-        // 📍 Tab 2: หมวดบริจาค
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/donation_start', builder: (context, state) => const DonationStartScreen()),
@@ -61,7 +56,6 @@ final appRouter = GoRouter(
               builder: (context, state) {
                 final data = state.extra as Map<String, dynamic>? ?? {};
                 return DonationFoundationScreen(
-                  // 🌟 บังคับแปลงเป็น List<String> เสมอ ป้องกันการแครช
                   selectedCategories: (data['categories'] as List<dynamic>?)?.cast<String>() ?? <String>[],
                   othersText: (data['others'] as String?) ?? '',
                 );
@@ -79,7 +73,6 @@ final appRouter = GoRouter(
               builder: (context, state) {
                 final data = state.extra as Map<String, dynamic>? ?? {};
                 return DonationDateScreen(
-                  // 🌟 บังคับแปลง Type ให้ปลอดภัยทั้งหมด
                   foundationName: (data['foundationName'] as String?) ?? 'ชื่อมูลนิธิ',
                   selectedCategories: (data['selectedCategories'] as List<dynamic>?)?.cast<String>() ?? <String>[],
                   othersText: (data['othersText'] as String?) ?? '',
@@ -114,7 +107,6 @@ final appRouter = GoRouter(
             GoRoute(path: '/donation_success', builder: (context, state) => const DonationSuccessScreen()),
           ],
         ),
-        // 📍 Tab 3: ประวัติ
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/history', builder: (context, state) => const HistoryScreen()),
@@ -127,7 +119,6 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // 📍 Tab 4: ผู้ใช้
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/user', builder: (context, state) => const UserScreen()),
