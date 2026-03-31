@@ -63,12 +63,24 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
     if (mounted) setState(() => isLoading = false);
   }
 
-  // แปลงวันที่
+  // แปลงวันที่แบบไม่มีเวลา (สำหรับวันที่นัดหมาย)
   String _formatThaiDate(Timestamp? timestamp) {
     if (timestamp == null) return 'ไม่ระบุวันที่';
     DateTime date = timestamp.toDate();
     final thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
     return '${date.day} ${thaiMonths[date.month - 1]} ${date.year + 543}';
+  }
+
+  // 🌟 ฟังก์ชันใหม่: แปลงวันที่แบบมีเวลาด้วย (สำหรับแสดงว่ากดทำรายการไปตอนไหน)
+  String _formatThaiDateTime(Timestamp? timestamp) {
+    if (timestamp == null) return 'ไม่ระบุวันเวลา';
+    DateTime date = timestamp.toDate();
+    final thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    
+    // จัดรูปแบบให้เลขชั่วโมงและนาทีมี 2 หลักเสมอ (เช่น 09:05)
+    String formattedTime = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    
+    return '${date.day} ${thaiMonths[date.month - 1]} ${date.year + 543} เวลา $formattedTime น.';
   }
 
   // ไอคอน
@@ -103,7 +115,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
     return '$firstPart และ${items.last}';
   }
 
-  // 🌟 ฟังก์ชันแสดง Pop-up ยืนยันการยกเลิก
+  // ฟังก์ชันแสดง Pop-up ยืนยันการยกเลิก
   void _showCancelDialog() {
     showDialog(
       context: context,
@@ -136,7 +148,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
     );
   }
 
-  // 🌟 ฟังก์ชันอัปเดตสถานะเป็น Cancelled ใน Firebase
+  // ฟังก์ชันอัปเดตสถานะเป็น Cancelled ใน Firebase
   Future<void> _cancelBooking() async {
     final String? bookingId = widget.bookingData['booking_id'];
     
@@ -154,21 +166,18 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
           .doc(bookingId)
           .update({
             'status': 'cancelled',
-            // รีเซ็ตประวัติการแจ้งเตือน เพื่อให้มันเด้งแจ้งเตือนการยกเลิกด้วย (ถ้าต้องการ)
             'dismissed_status': FieldValue.delete(), 
           });
 
      if (mounted) {
-        // 🌟 โชว์ข้อความสีแดงแจ้งว่าสำเร็จ (เด้งจากด้านบน)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             elevation: 10,
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.red.shade600,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            // 🌟 ทริคดันแจ้งเตือนไปไว้ด้านบนสุด
             margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height - 180, // ดันขึ้นไปด้านบน
+              bottom: MediaQuery.of(context).size.height - 180, 
               left: 20,
               right: 20,
             ),
@@ -185,7 +194,6 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
           ),
         );
         
-        // เด้งกลับไปหน้าประวัติรวม
         context.pop(); 
       }
     } catch (e) {
@@ -269,7 +277,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
                     _buildFoundationCard(),
                     const Divider(height: 40, thickness: 1),
 
-                    // --- 4. วันที่ ---
+                    // --- 4. วันที่นัดหมาย ---
                     Row(
                       children: [
                         Text('ในวันที่', style: TextStyle(color: primaryBlue, fontSize: 16, fontWeight: FontWeight.bold)),
@@ -314,15 +322,27 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
                           );
                         },
                       ),
+                      
+                    const SizedBox(height: 24), // ระยะห่างจากรูปภาพ
+
+                    // 🌟 6. ส่วนแสดงวันที่และเวลาที่กดทำรายการ (อยู่ใต้รูปภาพ)
+                    Center(
+                      child: Text(
+                        // ตรวจสอบทั้ง created_at และ timestamp เผื่อคุณใช้ชื่อฟิลด์แบบใดแบบหนึ่ง
+                        'ทำรายการเมื่อ: ${_formatThaiDateTime(widget.bookingData['created_at'] ?? widget.bookingData['timestamp'])}',
+                        style: const TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+
                     const SizedBox(height: 40),
 
-                    // 🌟 แสดงปุ่มยกเลิก เฉพาะตอนที่สถานะยังเป็น pending เท่านั้น
+                    // ปุ่มยกเลิก (แสดงเฉพาะสถานะ pending)
                     if (widget.bookingData['status'] == 'pending')
                       SizedBox(
                         width: double.infinity,
                         height: 55,
                         child: ElevatedButton(
-                          onPressed: _showCancelDialog, // เรียก Pop-up
+                          onPressed: _showCancelDialog, 
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red.shade500,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -362,7 +382,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
         Container(
           width: 90, height: 90,
           decoration: BoxDecoration(
-            color: Colors.yellow, // สีพื้นหลังเผื่อโหลดรูปไม่ติด
+            color: Colors.yellow, 
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.grey.shade300),
             image: logoImage != null ? DecorationImage(image: NetworkImage(logoImage), fit: BoxFit.contain) : null,
