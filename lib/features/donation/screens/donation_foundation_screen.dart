@@ -21,11 +21,22 @@ class _DonationFoundationScreenState extends State<DonationFoundationScreen> {
   final Color primaryTeal = const Color(0xFF64B5C7);
   
   Position? _currentPosition;
+  
+  // 🌟 ตัวแปรสำหรับช่องค้นหา
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation(); 
+  }
+
+  // 🌟 อย่าลืม dispose controller เพื่อคืนหน่วยความจำ
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -152,7 +163,41 @@ class _DonationFoundationScreenState extends State<DonationFoundationScreen> {
                     const SizedBox(height: 50),
 
                     const Text('เลือกมูลนิธิที่เปิดรับบริจาค', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const Divider(thickness: 1, height: 20),
+                    const SizedBox(height: 16),
+                    
+                    // 🌟 เพิ่มช่องค้นหาตรงนี้
+                    TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value.toLowerCase(); // ปรับตัวพิมพ์เล็กทั้งหมดให้หาง่ายขึ้น
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'ค้นหาชื่อมูลนิธิ...',
+                        prefixIcon: Icon(Icons.search, color: primaryTeal),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.cancel, color: Colors.grey),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    
+                    const Divider(thickness: 1, height: 30),
                     
                     StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance.collection('Foundations').snapshots(),
@@ -169,6 +214,7 @@ class _DonationFoundationScreenState extends State<DonationFoundationScreen> {
 
                         List<String> cleanSelected = widget.selectedCategories.map((e) => e.replaceAll('\n', '')).toList();
 
+                        // 🌟 1. กรองด้วยหมวดหมู่สิ่งของก่อน
                         if (widget.othersText.trim().isNotEmpty) {
                           filteredFoundations = allFoundations;
                         } else {
@@ -179,13 +225,25 @@ class _DonationFoundationScreenState extends State<DonationFoundationScreen> {
                           }).toList();
                         }
 
+                        // 🌟 2. นำผลที่ผ่านการกรองสิ่งของ มากะเทาะด้วยคำค้นหาอีกชั้น
+                        if (_searchQuery.isNotEmpty) {
+                          filteredFoundations = filteredFoundations.where((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final name = (data['name'] ?? '').toString().toLowerCase();
+                            return name.contains(_searchQuery);
+                          }).toList();
+                        }
+
+                        // 🌟 จัดการข้อความว่างเปล่าให้ตรงกับสถานการณ์
                         if (filteredFoundations.isEmpty) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 40),
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 40),
                             child: Center(
                               child: Text(
-                                'ยังไม่มีมูลนิธิเปิดรับของชนิดนี้ ในเวลานี้ครับ :)',
-                                style: TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
+                                _searchQuery.isNotEmpty 
+                                  ? 'ไม่พบชื่อมูลนิธิ "${_searchController.text}"\nที่รับบริจาคสิ่งของที่คุณเลือก' 
+                                  : 'ยังไม่มีมูลนิธิเปิดรับของชนิดนี้ ในเวลานี้ครับ :)',
+                                style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
                                 textAlign: TextAlign.center,
                               ),
                             ),
