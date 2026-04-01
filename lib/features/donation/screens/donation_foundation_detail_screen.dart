@@ -68,6 +68,7 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                             child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
                           ),
                         ),
+                        // 🌟 แก้ไขปุ่มย้อนกลับให้มีพื้นหลังสีขาวและคงเงื่อนไขเดิมไว้
                         Positioned(
                           top: 33, 
                           left: 10,
@@ -80,10 +81,24 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                                 context.go('/map'); // ถ้าย้อนไม่ได้ให้กลับแผนที่
                               }
                             },
-                            child: Image.asset(
-                              'assets/icons/back_arrow.png', 
-                              width: 35, 
-                              height: 35,
+                            child: Container(
+                              padding: const EdgeInsets.all(1), // เพิ่มพื้นที่สีขาวรอบๆ ไอคอน
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2), // ใส่เงาบางๆ ให้ดูมีมิติ
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Image.asset(
+                                'assets/icons/back_arrow.png', 
+                                width: 35, // ปรับขนาดไอคอนให้สมดุลกับวงกลม
+                                height: 35,
+                              ),
                             ),
                           ),
                         ),
@@ -232,7 +247,6 @@ class DonationFoundationDetailScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          // ❌ ลบ else ทิ้งไปแล้ว (ถ้ามาจาก Home/Map จะไม่มีปุ่มอะไรโชว์เลย)
 
                           const SizedBox(height: 20),
                         ],
@@ -247,6 +261,7 @@ class DonationFoundationDetailScreen extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildInfoPill({required IconData icon, required Color iconColor, required String text}) {
     return Container(
       decoration: BoxDecoration(
