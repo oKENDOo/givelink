@@ -25,7 +25,7 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
   
   Timer? _emailCheckTimer; 
   bool _isLoggingOut = false;
-  bool _isPickingImage = false; // 🌟 1. เพิ่มตัวแปรนี้เข้ามาเพื่อกันการกดเบิ้ล
+  bool _isPickingImage = false; 
 
   @override
   void initState() {
@@ -154,16 +154,15 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
     }
   }
 
- void _showImagePickerSheet() async {
-    // 🌟 2. ถ้ากำลังดึงรูปอยู่ ให้หยุดการทำงานรอบนี้ไปเลย (ป้องกันกดเบิ้ล)
+  void _showImagePickerSheet() async {
     if (_isPickingImage) return; 
-    _isPickingImage = true; // ล็อคสถานะไว้ว่ากำลังเปิดแกลลอรี่
+    _isPickingImage = true; 
 
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
-      _isPickingImage = false; // 🌟 3. เมื่อดึงรูปเสร็จ (หรือกดยกเลิก) ให้ปลดล็อคทันที
+      _isPickingImage = false; 
 
       if (image == null || !mounted) return;
 
@@ -248,7 +247,7 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
         ),
       );
     } catch (e) {
-      _isPickingImage = false; // 🌟 4. ถ้าเกิด Error อะไรขึ้นมา ก็อย่าลืมปลดล็อคด้วย
+      _isPickingImage = false; 
       debugPrint("Error picking image: $e");
     }
   }
@@ -413,7 +412,7 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
         
         if (e.code == 'requires-recent-login') {
           Future.delayed(const Duration(milliseconds: 200), () {
-             _showReAuthDialog(newEmail);
+             _showReAuthDialog(newEmail: newEmail);
           });
         } else if (e.code == 'email-already-in-use') {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -435,7 +434,42 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
     }
   }
 
-  void _showReAuthDialog(String newEmail) {
+  Future<void> _updatePassword(String newPassword) async {
+    if (newPassword.isEmpty || newPassword.length < 6) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await user?.updatePassword(newPassword);
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); 
+        await _triggerSuccessAndLogout('เปลี่ยนรหัสผ่านสำเร็จ!\nระบบจะพากลับไปหน้าต้อนรับใน 5 วินาที...');
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); 
+
+        if (e.code == 'requires-recent-login') {
+          Future.delayed(const Duration(milliseconds: 200), () {
+             _showReAuthDialog(newPassword: newPassword);
+          });
+        } else {
+           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: ${e.message}'), backgroundColor: Colors.red));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'), backgroundColor: Colors.red));
+      }
+    }
+  }
+
+  void _showReAuthDialog({String? newEmail, String? newPassword}) {
     final TextEditingController passwordController = TextEditingController();
 
     showDialog(
@@ -444,22 +478,24 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('ยืนยันตัวตน', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('เพื่อความปลอดภัย กรุณากรอกรหัสผ่านปัจจุบันของคุณเพื่อทำรายการต่อ'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                hintText: 'รหัสผ่านปัจจุบัน',
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('เพื่อความปลอดภัย กรุณากรอกรหัสผ่านปัจจุบันของคุณเพื่อทำรายการต่อ'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  hintText: 'รหัสผ่านปัจจุบัน',
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -484,19 +520,25 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
                 );
                 await user!.reauthenticateWithCredential(credential);
 
-                await user!.verifyBeforeUpdateEmail(newEmail);
-
-                if (mounted) {
-                  Navigator.of(context, rootNavigator: true).pop(); 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('ยืนยันตัวตนสำเร็จ!\nส่งลิงก์ยืนยันไปที่อีเมลใหม่แล้ว กรุณาเช็ค Inbox ครับ'),
-                      backgroundColor: Colors.green, 
-                      duration: Duration(seconds: 5), 
-                    )
-                  );
-                  
-                  _startEmailCheckTimer(); 
+                if (newEmail != null) {
+                  await user!.verifyBeforeUpdateEmail(newEmail);
+                  if (mounted) {
+                    Navigator.of(context, rootNavigator: true).pop(); 
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('ยืนยันตัวตนสำเร็จ!\nส่งลิงก์ยืนยันไปที่อีเมลใหม่แล้ว กรุณาเช็ค Inbox ครับ'),
+                        backgroundColor: Colors.green, 
+                        duration: Duration(seconds: 5), 
+                      )
+                    );
+                    _startEmailCheckTimer(); 
+                  }
+                } else if (newPassword != null) {
+                  await user!.updatePassword(newPassword);
+                  if (mounted) {
+                    Navigator.of(context, rootNavigator: true).pop(); 
+                    await _triggerSuccessAndLogout('เปลี่ยนรหัสผ่านสำเร็จ!\nระบบจะพากลับไปหน้าต้อนรับใน 5 วินาที...');
+                  }
                 }
 
               } on FirebaseAuthException catch (e) {
@@ -533,27 +575,12 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
     );
   }
 
-  Future<void> _updatePassword(String newPassword) async {
-    if (newPassword.isEmpty || newPassword.length < 6) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร')));
-      return;
-    }
-    try {
-      await user?.updatePassword(newPassword);
-      if (mounted) {
-        await _triggerSuccessAndLogout('เปลี่ยนรหัสผ่านสำเร็จ!\nระบบจะพากลับไปหน้าต้อนรับใน 5 วินาที...');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณาออกจากระบบและเข้าสู่ระบบใหม่อีกครั้งก่อนเปลี่ยนรหัสผ่าน')));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      // 🌟 1. สั่งไม่ให้ฉากหลังพยายามหดตัวหนีคีย์บอร์ดจนพัง
+      resizeToAvoidBottomInset: false, 
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -563,99 +590,100 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            
-            // --- 1. รูปโปรไฟล์ และ ปุ่มแก้ไขรูป ---
-            Center(
-              // 🌟 ครอบ GestureDetector ไว้ที่ Column นี้เลย เพื่อให้กดได้ทั้งรูปและตัวหนังสือ
-              child: GestureDetector(
-                onTap: _showImagePickerSheet,
-                behavior: HitTestBehavior.opaque, // เพื่อให้กดพื้นที่ว่างระหว่างรูปกับตัวอักษรได้ด้วย
-                child: Column(
-                  children: [
-                    Container(
-                      width: 110,
-                      height: 110,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        shape: BoxShape.circle,
+        // 🌟 2. นำ SingleChildScrollView มาครอบเนื้อหาหลักทั้งหมดไว้
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              
+              Center(
+                child: GestureDetector(
+                  onTap: _showImagePickerSheet,
+                  behavior: HitTestBehavior.opaque, 
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 110,
+                        height: 110,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          shape: BoxShape.circle,
+                        ),
+                        child: ClipOval(
+                          child: _pickedImage != null 
+                            ? Image.file(_pickedImage!, fit: BoxFit.cover)
+                            : (photoUrl != null && photoUrl!.isNotEmpty)
+                                ? Image.network(
+                                    photoUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 60, color: Colors.grey),
+                                  )
+                                : Image.network(
+                                    'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 60, color: Colors.grey),
+                                  ),
+                        ),
                       ),
-                      child: ClipOval(
-                        child: _pickedImage != null 
-                          ? Image.file(_pickedImage!, fit: BoxFit.cover)
-                          : (photoUrl != null && photoUrl!.isNotEmpty)
-                              ? Image.network(
-                                  photoUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 60, color: Colors.grey),
-                                )
-                              : Image.network(
-                                  'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 60, color: Colors.grey),
-                                ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.image, size: 20, color: Colors.black87),
+                          SizedBox(width: 6),
+                          Text('แก้ไข', style: TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.bold)),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.image, size: 20, color: Colors.black87),
-                        SizedBox(width: 6),
-                        Text('แก้ไข', style: TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 40),
+              const SizedBox(height: 40),
 
-            // --- 2. กล่องรายการข้อมูล ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Column(
-                  children: [
-                    _buildListTile('ชื่อผู้ใช้', userName, false, () {
-                      _showEditBottomSheet(
-                        title: 'แก้ไขชื่อผู้ใช้', 
-                        currentValue: userName, 
-                        isPassword: false, 
-                        onSave: _updateName,
-                        maxLength: 12,
-                      );
-                    }),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    _buildListTile('อีเมล', email.length > 15 ? '${email.substring(0, 15)}...' : email, false, () {
-                      _showEditBottomSheet(
-                        title: 'แก้ไขอีเมล', 
-                        currentValue: email, 
-                        isPassword: false, 
-                        onSave: _updateEmail,
-                      );
-                    }),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    _buildListTile('รหัสผ่าน', '********', true, () {
-                      _showEditBottomSheet(
-                        title: 'แก้ไขรหัสผ่าน', 
-                        currentValue: '', 
-                        isPassword: true, 
-                        onSave: _updatePassword,
-                      );
-                    }),
-                  ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildListTile('ชื่อผู้ใช้', userName, false, () {
+                        _showEditBottomSheet(
+                          title: 'แก้ไขชื่อผู้ใช้', 
+                          currentValue: userName, 
+                          isPassword: false, 
+                          onSave: _updateName,
+                          maxLength: 12,
+                        );
+                      }),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      _buildListTile('อีเมล', email.length > 15 ? '${email.substring(0, 15)}...' : email, false, () {
+                        _showEditBottomSheet(
+                          title: 'แก้ไขอีเมล', 
+                          currentValue: email, 
+                          isPassword: false, 
+                          onSave: _updateEmail,
+                        );
+                      }),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      _buildListTile('รหัสผ่าน', '********', true, () {
+                        _showEditBottomSheet(
+                          title: 'แก้ไขรหัสผ่าน', 
+                          currentValue: '', 
+                          isPassword: true, 
+                          onSave: _updatePassword,
+                        );
+                      }),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 40), // เผื่อที่ว่างด้านล่างเล็กน้อยให้เลื่อนได้สวยงาม
+            ],
+          ),
         ),
       ),
     );
