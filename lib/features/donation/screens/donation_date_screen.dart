@@ -151,7 +151,10 @@ class _DonationDateScreenState extends State<DonationDateScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       padding: const EdgeInsets.all(8),
-                      child: TableCalendar(
+                     child: TableCalendar(
+                        // 🌟 เพิ่มบรรทัดนี้ เพื่อให้ปฏิทินรับแค่การปัดซ้ายขวา แล้วปล่อยให้ปัดหน้าจอขึ้นลงได้
+                        availableGestures: AvailableGestures.horizontalSwipe,
+
                         firstDay: DateTime.now(), // เริ่มจากวันนี้
                         lastDay: DateTime.now().add(const Duration(days: 365)), // ล่วงหน้าได้ 1 ปี
                         focusedDay: _focusedDay,

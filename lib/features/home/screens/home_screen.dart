@@ -556,7 +556,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 padding: const EdgeInsets.all(8),
-                child: TableCalendar(
+              child: TableCalendar(
+                  // 🌟 เพิ่มบรรทัดนี้ เพื่อให้ปฏิทินรับแค่การปัดซ้ายขวา แล้วปล่อยให้ปัดบนล่างเลื่อนหน้าจอได้
+                  availableGestures: AvailableGestures.horizontalSwipe,
+                  
                   firstDay: DateTime.utc(2020, 1, 1),
                   lastDay: DateTime.utc(2030, 12, 31),
                   focusedDay: _focusedDay,

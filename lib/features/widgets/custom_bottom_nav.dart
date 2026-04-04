@@ -12,9 +12,14 @@ class CustomBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 นำ SizedBox มาครอบเพื่อล็อคความสูงของแถบ Navbar
+    // 🌟 1. ดึงระยะความสูงของขอบจอด้านล่าง (Safe Area / แถบ Home) ของมือถือแต่ละรุ่น
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return SizedBox(
-      height: 88, 
+      // 🌟 2. ปรับความสูงแบบไดนามิก: ความสูงฐาน (75) + ขอบล่างของมือถือเครื่องนั้นๆ
+      // ถ้าเป็นมือถือจอธรรมดา bottomPadding จะเป็น 0 (สูง 75 ปกติ)
+      // ถ้าเป็นมือถือจอยาว bottomPadding จะมีค่าเพิ่มขึ้น ทำให้ไม่เกิด Error Overflow
+      height: 75 + bottomPadding, 
       child: BottomNavigationBar(
         currentIndex: currentIndex,
         onTap: onTap, 
@@ -24,13 +29,8 @@ class CustomBottomNav extends StatelessWidget {
         unselectedItemColor: Colors.black, // สีดำตอนไม่ได้เลือก
         selectedFontSize: 14, 
         unselectedFontSize: 12,
-        
-        // 🌟 1. เพิ่มบรรทัดนี้ เพื่อทำให้ตัวอักษรตอนที่ "ถูกเลือก" เป็นตัวหนา
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        
-        // 🌟 2. เพิ่มบรรทัดนี้ เพื่อทำให้ตัวอักษรตอนที่ "ไม่ได้เลือก" เป็นตัวหนาด้วย
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home, size: 30), label: 'หน้าหลัก'),
           BottomNavigationBarItem(icon: Icon(Icons.location_on, size: 30), label: 'แผนที่'),

@@ -37,21 +37,13 @@ class DonationSuccessScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 40),
 
-                // --- ปุ่มดูประวัติการบริจาค ---
+                // --- ปุ่มดูประวัติการบริจาค (ปุ่มหลัก) ---
                 SizedBox(
                   width: double.infinity,
                   height: 60,
                   child: ElevatedButton(
                     onPressed: () {
-                      // 🌟 1. สั่งให้ Tab บริจาคนี้ กลับไปตั้งต้นที่หน้าแรกสุดแบบเงียบๆ (เพื่อลบหน้า Success ทิ้ง)
-                      context.go('/donation_start');
-                      
-                      // 🌟 2. สลับหน้าไปยัง Tab ประวัติ (History)
-                     Future.delayed(const Duration(milliseconds: 100), () {
-                        if (context.mounted) {
-                          context.go('/history');
-                        }
-                      });
+                      context.go('/history');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryTeal,
@@ -77,6 +69,42 @@ class DonationSuccessScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 16), // เว้นระยะห่างระหว่างปุ่ม
+
+                // --- 🌟 ปุ่มจองการบริจาคอีกครั้ง (ปุ่มรอง) ---
+                SizedBox(
+                  width: double.infinity,
+                  height: 60,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      // กระโดดไปหน้าเริ่มจองบริจาค
+                      context.go('/donation_start');
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: primaryTeal, width: 2), // ขอบสีฟ้า
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'จองการบริจาคอีกครั้ง',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: primaryTeal,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Icon(Icons.add_circle_outline, color: primaryTeal, size: 28),
+                      ],
+                    ),
+                  ),
+                ),
+
               ],
             ),
           ),
