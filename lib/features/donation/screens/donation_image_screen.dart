@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart'; // 🌟 ใช้สำหรับเลือกรูป
+import 'package:image_picker/image_picker.dart'; 
 
 class DonationImageScreen extends StatefulWidget {
   final String foundationName;
   final List<dynamic> selectedCategories;
   final String othersText;
-  final DateTime? selectedDate; // รับวันที่มาจากหน้า 3
+  final DateTime? selectedDate; 
 
   const DonationImageScreen({
     super.key,
@@ -24,11 +24,9 @@ class DonationImageScreen extends StatefulWidget {
 class _DonationImageScreenState extends State<DonationImageScreen> {
   final Color primaryTeal = const Color(0xFF64B5C7);
   
-  // 🌟 ตัวแปรเก็บรูปภาพที่ผู้ใช้เลือก
   final List<File> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
 
-  // ฟังก์ชันเลือกรูปภาพ (จำกัด 5 รูป)
   Future<void> _pickImages() async {
     if (_selectedImages.length >= 5) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('อัปโหลดได้สูงสุด 5 รูปครับ')));
@@ -36,7 +34,6 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
     }
 
     try {
-      // ให้เลือกได้หลายรูปพร้อมกัน
       final List<XFile> pickedFiles = await _picker.pickMultiImage();
       if (pickedFiles.isNotEmpty) {
         setState(() {
@@ -52,14 +49,51 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
     }
   }
 
-  // ฟังก์ชันลบรูปที่เลือก
   void _removeImage(int index) {
     setState(() {
       _selectedImages.removeAt(index);
     });
   }
 
-  // ฟังก์ชันแปลงชื่อหมวดหมู่กลับเป็น Icon
+  // 🌟 ฟังก์ชันแสดงรูปภาพเต็มหน้าจอ (สำหรับภาพจากตัวเครื่อง)
+  void _showFullScreenImage(BuildContext context, File imageFile) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Scaffold(
+          backgroundColor: Colors.black.withOpacity(0.9), // พื้นหลังสีดำโปร่งแสง
+          body: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer( // 🌟 ทำให้ใช้นิ้วซูมภาพได้
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.file(
+                    imageFile,
+                    fit: BoxFit.contain, // แสดงภาพเต็มจอโดยไม่ถูกตัด
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 36),
+                      onPressed: () => Navigator.of(context).pop(), // กดปิดรูป
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   IconData _getIconForCategory(String title) {
     switch (title) {
       case 'เสื้อผ้า': return Icons.checkroom;
@@ -78,7 +112,6 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
     }
   }
 
-  // ฟังก์ชันแปลงวันที่เป็นภาษาไทย (พ.ศ.)
   String _formatThaiDate(DateTime? date) {
     if (date == null) return '';
     final List<String> thaiMonths = [
@@ -115,7 +148,6 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- 1. หัวข้อหลัก ---
                     const Center(
                       child: Text(
                         'ถ่ายภาพสิ่งของที่จะนำ\nไปบริจาคเพื่อส่งให้กับมูลนิธิ',
@@ -125,13 +157,11 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // --- 2. สรุปข้อมูลที่เลือกมา ---
                     Center(
                       child: Text('สิ่งของที่จะบริจาค', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryTeal)),
                     ),
                     const SizedBox(height: 10),
                     
-                    // ไอคอนสิ่งของ
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -168,21 +198,18 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
 
                     const SizedBox(height: 30),
 
-                    // --- 3. ส่วนอัปโหลดรูปภาพ ---
                     const Text('เลือกรูปสิ่งของที่คุณจะบริจาค', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const Divider(thickness: 1, height: 20),
                     
-                    // กล่องสีเทาสำหรับใส่รูป
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300, // พื้นหลังสีเทาตามดีไซน์
+                        color: Colors.grey.shade300, 
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
                         children: [
-                          // แสดงรูปภาพที่เลือกแบบ Grid
                           if (_selectedImages.isNotEmpty)
                             GridView.builder(
                               shrinkWrap: true,
@@ -193,9 +220,8 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
                                 mainAxisSpacing: 10,
                                 childAspectRatio: 1,
                               ),
-                              itemCount: _selectedImages.length < 5 ? _selectedImages.length + 1 : 5, // ถ้ายังไม่ครบ 5 ให้แสดงปุ่มบวกต่อท้าย
+                              itemCount: _selectedImages.length < 5 ? _selectedImages.length + 1 : 5, 
                               itemBuilder: (context, index) {
-                                // ถ้าเป็นช่องสุดท้ายและรูปยังไม่ครบ 5 ให้แสดงปุ่ม "เพิ่มรูป"
                                 if (index == _selectedImages.length && _selectedImages.length < 5) {
                                   return GestureDetector(
                                     onTap: _pickImages,
@@ -217,15 +243,18 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
                                   );
                                 }
                                 
-                                // แสดงรูปที่เลือกมา
                                 return Stack(
                                   fit: StackFit.expand,
                                   children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Image.file(_selectedImages[index], fit: BoxFit.cover),
+                                    // 🌟 หุ้มรูปภาพด้วย GestureDetector เพื่อกดดูรูปเต็มหน้าจอ
+                                    GestureDetector(
+                                      onTap: () => _showFullScreenImage(context, _selectedImages[index]),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.file(_selectedImages[index], fit: BoxFit.cover),
+                                      ),
                                     ),
-                                    // ปุ่มลบรูปภาพ (กากบาทมุมขวาบน)
+                                    // ปุ่มลบรูปภาพ (แยกทำงานอิสระ ไม่ทับกับกดดูรูป)
                                     Positioned(
                                       top: 4,
                                       right: 4,
@@ -243,7 +272,6 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
                               },
                             )
                           else
-                            // หน้าตาตอนยังไม่ได้เลือกรูปเลย
                             GestureDetector(
                               onTap: _pickImages,
                               child: Container(
@@ -273,7 +301,6 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
 
                     const SizedBox(height: 40),
 
-                    // --- 4. ปุ่มขั้นตอนต่อไป ---
                     SizedBox(
                       width: double.infinity,
                       height: 65,
@@ -284,13 +311,12 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
                             return;
                           }
                           
-                          // 🌟 ส่งข้อมูลทั้งหมดที่มี รวมถึง _selectedImages ไปหน้าสรุปผล
                           context.push('/donation_summary', extra: {
                             'foundationName': widget.foundationName,
                             'selectedCategories': widget.selectedCategories,
                             'othersText': widget.othersText,
                             'selectedDate': widget.selectedDate,
-                            'selectedImages': _selectedImages, // ส่งรูปภาพไปด้วย
+                            'selectedImages': _selectedImages, 
                           });
                         },
                         style: ElevatedButton.styleFrom(

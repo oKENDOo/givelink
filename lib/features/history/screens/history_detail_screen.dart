@@ -71,7 +71,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
     return '${date.day} ${thaiMonths[date.month - 1]} ${date.year + 543}';
   }
 
-  // 🌟 ฟังก์ชันใหม่: แปลงวันที่แบบมีเวลาด้วย (สำหรับแสดงว่ากดทำรายการไปตอนไหน)
+  // แปลงวันที่แบบมีเวลาด้วย (สำหรับแสดงว่ากดทำรายการไปตอนไหน)
   String _formatThaiDateTime(Timestamp? timestamp) {
     if (timestamp == null) return 'ไม่ระบุวันเวลา';
     DateTime date = timestamp.toDate();
@@ -132,13 +132,13 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
           content: const Text('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองบริจาคนี้?\nหากยกเลิกแล้วจะไม่สามารถย้อนกลับได้'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context), // ปิด Pop-up
+              onPressed: () => Navigator.pop(context), 
               child: const Text('ไม่ยกเลิก', style: TextStyle(color: Colors.grey, fontSize: 16)),
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // ปิด Pop-up
-                _cancelBooking(); // เรียกฟังก์ชันอัปเดตฐานข้อมูล
+                Navigator.pop(context); 
+                _cancelBooking(); 
               },
               child: const Text('ยืนยันการยกเลิก', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
@@ -157,10 +157,9 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
       return;
     }
 
-    setState(() => isLoading = true); // โชว์ตัวโหลดหน้าจอ
+    setState(() => isLoading = true); 
 
     try {
-      // อัปเดตสถานะใน Firestore
       await FirebaseFirestore.instance
           .collection('DonationBookings')
           .doc(bookingId)
@@ -177,7 +176,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
             backgroundColor: Colors.red.shade600,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height - 250, 
+              bottom: MediaQuery.of(context).size.height - 200, 
               left: 20,
               right: 20,
             ),
@@ -204,9 +203,47 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
     }
   }
 
+  // 🌟 ฟังก์ชันแสดงรูปภาพเต็มหน้าจอ (สำหรับภาพจากอินเทอร์เน็ต)
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Scaffold(
+          backgroundColor: Colors.black.withOpacity(0.9), // พื้นหลังสีดำโปร่งแสง
+          body: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer( // 🌟 ทำให้ใช้นิ้วซูมภาพได้
+                  panEnabled: true, 
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain, // แสดงภาพเต็มจอโดยไม่ถูกตัด
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 36),
+                      onPressed: () => Navigator.of(context).pop(), // กดปิดรูป
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ดึงและเตรียมข้อมูลสิ่งของ
     List<dynamic> rawCategories = widget.bookingData['selected_categories'] ?? [];
     String others = widget.bookingData['others_text'] ?? '';
     List<String> allItems = rawCategories.map((e) => e.toString().replaceAll('\n', '')).toList();
@@ -303,19 +340,23 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: imageUrls.length,
                         itemBuilder: (context, index) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16.0),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
-                                imageUrls[index].toString(),
-                                width: double.infinity,
-                                height: 250,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Container(
+                          // 🌟 หุ้มด้วย GestureDetector เพื่อให้กดดูรูปใหญ่ได้
+                          return GestureDetector(
+                            onTap: () => _showFullScreenImage(context, imageUrls[index].toString()),
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 16.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  imageUrls[index].toString(),
+                                  width: double.infinity,
                                   height: 250,
-                                  color: Colors.grey.shade200,
-                                  child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    height: 250,
+                                    color: Colors.grey.shade200,
+                                    child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                                  ),
                                 ),
                               ),
                             ),
@@ -323,12 +364,11 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
                         },
                       ),
                       
-                    const SizedBox(height: 24), // ระยะห่างจากรูปภาพ
+                    const SizedBox(height: 24), 
 
-                    // 🌟 6. ส่วนแสดงวันที่และเวลาที่กดทำรายการ (อยู่ใต้รูปภาพ)
+                    // 6. ส่วนแสดงวันที่และเวลา
                     Center(
                       child: Text(
-                        // ตรวจสอบทั้ง created_at และ timestamp เผื่อคุณใช้ชื่อฟิลด์แบบใดแบบหนึ่ง
                         'ทำรายการเมื่อ: ${_formatThaiDateTime(widget.bookingData['created_at'] ?? widget.bookingData['timestamp'])}',
                         style: const TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.w500),
                       ),
@@ -336,7 +376,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
 
                     const SizedBox(height: 40),
 
-                    // ปุ่มยกเลิก (แสดงเฉพาะสถานะ pending)
+                    // ปุ่มยกเลิก
                     if (widget.bookingData['status'] == 'pending')
                       SizedBox(
                         width: double.infinity,

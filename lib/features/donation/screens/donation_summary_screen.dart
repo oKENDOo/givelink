@@ -89,6 +89,7 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
     }
   }
 
+  // 🌟 ฟังก์ชันอัปโหลดรูป (อัปเกรดขยายเวลา Timeout)
   Future<String?> _uploadSingleImageToImgBB(File imageFile) async {
     const String apiKey = "0f95841b75294557c99590bce575a91d"; 
     final Uri url = Uri.parse('https://api.imgbb.com/1/upload?key=$apiKey');
@@ -96,7 +97,8 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
     request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
 
     try {
-      final response = await request.send().timeout(const Duration(seconds: 15));
+      // 🌟 ขยายเวลาเป็น 60 วินาที เพื่อให้ส่งรูปใหญ่ๆ ได้ทัน ไม่ล้มเหลวกลางคัน
+      final response = await request.send().timeout(const Duration(seconds: 60));
       final responseData = await response.stream.bytesToString();
       final jsonResult = jsonDecode(responseData);
 
@@ -109,6 +111,7 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
     return null;
   }
 
+  // 🌟 ฟังก์ชันบันทึกข้อมูลการจอง (อัปเกรดดักจับ Error รูปภาพ)
   Future<void> _submitDonationBooking() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -133,6 +136,17 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
         }
       }
 
+      // 🌟 ดักจับ Error: ถ้าเลือกรูปมา แต่อัปโหลดได้ URL กลับมาไม่ครบ หรือล้มเหลว
+      if (widget.selectedImages.isNotEmpty && uploadedImageUrls.isEmpty) {
+        if (mounted) {
+          setState(() { isSaving = false; });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('อัปโหลดรูปภาพไม่สำเร็จ (อาจใช้เวลานานเกินไป) กรุณาลองใหม่ครับ'), backgroundColor: Colors.red),
+          );
+        }
+        return; // 🛑 หยุดการบันทึก ไม่ให้ไปต่อ!
+      }
+
       final bookingData = {
         'user_id': user.uid,
         'foundation_id': foundationId,
@@ -150,7 +164,38 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
 
       if (mounted) {
         setState(() { isSaving = false; });
-        // 🌟 ตัด SnackBar ที่ทำให้แอปค้างออกไป แล้วใช้วิธีเปลี่ยนหน้าไป Success เลย
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            elevation: 10,
+            behavior: SnackBarBehavior.floating, 
+            backgroundColor: Colors.green.shade600, 
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), 
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height - 200, 
+              left: 20,
+              right: 20,
+            ),
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 32),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('ทำรายการสำเร็จ!', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text('ระบบได้บันทึกการจองบริจาคของคุณแล้ว', style: TextStyle(fontSize: 13, color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            duration: const Duration(seconds: 3), 
+          ),
+        );
+
         context.pushReplacement('/donation_success');
       }
 
@@ -161,6 +206,45 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่')));
       }
     }
+  }
+
+  // 🌟 ฟังก์ชันแสดงรูปภาพเต็มหน้าจอ (สำหรับภาพจากตัวเครื่องที่ถูกเลือกไว้)
+  void _showFullScreenImage(BuildContext context, File imageFile) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Scaffold(
+          backgroundColor: Colors.black.withOpacity(0.9), // พื้นหลังสีดำโปร่งแสง
+          body: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer( // 🌟 ทำให้ใช้นิ้วซูมภาพได้
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.file(
+                    imageFile,
+                    fit: BoxFit.contain, // แสดงภาพเต็มจอโดยไม่ถูกตัด
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 36),
+                      onPressed: () => Navigator.of(context).pop(), // กดปิดรูป
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   IconData _getIconForCategory(String title) {
@@ -297,13 +381,17 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
                       itemBuilder: (context, index) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16.0),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              widget.selectedImages[index] as File,
-                              width: double.infinity,
-                              height: 300,
-                              fit: BoxFit.cover,
+                          // 🌟 เพิ่ม GestureDetector สำหรับเปิดดูรูปภาพ
+                          child: GestureDetector(
+                            onTap: () => _showFullScreenImage(context, widget.selectedImages[index] as File),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                widget.selectedImages[index] as File,
+                                width: double.infinity,
+                                height: 300,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                         );
