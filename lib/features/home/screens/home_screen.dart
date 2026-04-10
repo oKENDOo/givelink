@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart'; 
 import 'news_detail_screen.dart'; 
 import 'package:go_router/go_router.dart';
+import 'dart:async'; // สำหรับดักจับ Stream
 
 class BannerItem {
   final String categoryTitle;
@@ -38,7 +39,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentPage = 0;
   
   Position? _currentPosition;
-  late Stream<QuerySnapshot> _foundationsStream; // 🌟 1. เพิ่มตัวแปรนี้ไว้เก็บข้อมูลมูลนิธิ
+  late Stream<QuerySnapshot> _foundationsStream; 
+
+  // 🌟 เพิ่มตัวแปรนี้ เพื่อสร้างตัวแปรเก็บสถานะการดักฟังฐานข้อมูล
+  StreamSubscription<QuerySnapshot>? _donationSubscription;
 
   final List<BannerItem> bannerData = [
     BannerItem(
@@ -67,10 +71,9 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   
-  // 🌟 1. เปลี่ยนตัวแปรเก็บข้อมูล Event ให้เก็บเป็น Map ของ Firebase Document แทน String
   Map<DateTime, List<Map<String, dynamic>>> _donationEvents = {};
-// 🌟 เพิ่มตัวแปรเก็บรายการแจ้งเตือนทั้งหมด
   List<Map<String, dynamic>> _recentNotifications = [];
+
   @override
   void initState() {
     super.initState();
@@ -80,22 +83,22 @@ class _HomeScreenState extends State<HomeScreen> {
     _selectedDay = _focusedDay; 
     _listenToDonationEvents(); 
     
-    // 🌟 2. โหลดข้อมูลฐานข้อมูลมาเก็บไว้แค่ "ครั้งเดียว" ตอนเปิดแอป
     _foundationsStream = FirebaseFirestore.instance.collection('Foundations').snapshots();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _donationSubscription?.cancel(); // 🌟 ยกเลิกการดักฟังเมื่อเปลี่ยนหน้า ป้องกันแอปค้าง!
     super.dispose();
   }
 
-  // 🌟 3. ฟังก์ชันดึงประวัติการบริจาคจาก Firestore แบบ Real-time
   void _listenToDonationEvents() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    FirebaseFirestore.instance
+    // 🌟 นำ _donationSubscription มารับค่าการ listen
+    _donationSubscription = FirebaseFirestore.instance
         .collection('DonationBookings')
         .where('user_id', isEqualTo: user.uid)
         .snapshots()
@@ -106,12 +109,10 @@ class _HomeScreenState extends State<HomeScreen> {
       
       for (var doc in snapshot.docs) {
         final data = doc.data();
-        data['booking_id'] = doc.id; // ดึง ID มาเผื่อไว้
+        data['booking_id'] = doc.id; 
 
-        // 🌟 ลอจิกใหม่: สร้าง Notification แยกร่างตามสถานะ
         String currentStatus = data['status'] ?? 'pending';
         
-        // แปลงประวัติการปัดทิ้งให้อยู่ในรูปแบบ List (รองรับทั้งข้อมูลเก่าและใหม่)
         List<dynamic> dismissedList = data['dismissed_statuses'] ?? [];
         if (data['is_notification_dismissed'] == true && data['dismissed_status'] == null) {
           dismissedList.add('pending'); 
@@ -119,22 +120,19 @@ class _HomeScreenState extends State<HomeScreen> {
           dismissedList.add(data['dismissed_status']); 
         }
 
-        // --- ร่างที่ 1: แจ้งเตือน "จองสำเร็จ (pending)" ---
-        // จะโชว์เสมอถ้าผู้ใช้ยังไม่เคยปัด pending ทิ้ง (ไม่ว่าสถานะปัจจุบันจะเป็นอะไรก็ตาม)
         if (!dismissedList.contains('pending')) {
           allNotifications.add({
             ...data,
-            'notification_type': 'pending', // 🌟 แปะป้ายว่านี่คือร่าง pending
+            'notification_type': 'pending', 
             'sort_time': data['created_at'],
           });
         }
 
-        // --- ร่างที่ 2: แจ้งเตือน "เสร็จสิ้น" หรือ "ยกเลิก" ---
         if (currentStatus == 'completed' || currentStatus == 'success') {
           if (!dismissedList.contains('completed')) {
             allNotifications.add({
               ...data,
-              'notification_type': 'completed', // 🌟 แปะป้ายว่านี่คือร่าง completed
+              'notification_type': 'completed', 
               'sort_time': data['created_at'],
             });
           }
@@ -148,7 +146,6 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
 
-        // --- ส่วนของปฏิทิน (ทำงานปกติเหมือนเดิม) ---
         if (data['donation_date'] != null) {
           DateTime date = (data['donation_date'] as Timestamp).toDate();
           DateTime normalizedDate = DateTime.utc(date.year, date.month, date.day);
@@ -157,7 +154,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
       
-      // เรียงลำดับแจ้งเตือน เอาอันใหม่สุดไว้บน (ถ้ามี 2 ร่างให้ร่าง completed อยู่บน)
       allNotifications.sort((a, b) {
         Timestamp? timeA = a['sort_time'] as Timestamp?;
         Timestamp? timeB = b['sort_time'] as Timestamp?;
@@ -255,7 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🌟 4. ดึงข้อมูล Event ประจำวันส่งให้ปฏิทิน
   List<Map<String, dynamic>> _getEventsForDay(DateTime day) {
     final normalizedDay = DateTime.utc(day.year, day.month, day.day);
     return _donationEvents[normalizedDay] ?? [];
@@ -273,7 +268,6 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🌟 เอา StreamBuilder มาครอบเพื่อดักฟังรูปและชื่อใหม่ๆ
               StreamBuilder<User?>(
                 stream: FirebaseAuth.instance.userChanges(),
                 builder: (context, snapshot) {
@@ -301,7 +295,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(width: 12),
                           Text(currentName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                           const Spacer(),
-                          // 🌟 ใส่ Badge สีแดงครอบไอคอนระฆัง
                           Badge(
                             isLabelVisible: _recentNotifications.isNotEmpty, 
                             label: Text(_recentNotifications.length > 9 ? '9+' : '${_recentNotifications.length}'), 
@@ -385,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
 
               StreamBuilder<QuerySnapshot>(
-                stream: _foundationsStream, // 🌟 3. เปลี่ยนมาใช้ตัวแปรที่เราโหลดเตรียมไว้แล้ว
+                stream: _foundationsStream, 
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -557,6 +550,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 padding: const EdgeInsets.all(8),
               child: TableCalendar(
+                  // 🌟 แก้ปัญหาตัวหนังสือ Sun Mon โดนตัดครึ่ง โดยการเพิ่มความสูงของแถว
+                  daysOfWeekHeight: 30,
+
                   // 🌟 เพิ่มบรรทัดนี้ เพื่อให้ปฏิทินรับแค่การปัดซ้ายขวา แล้วปล่อยให้ปัดบนล่างเลื่อนหน้าจอได้
                   availableGestures: AvailableGestures.horizontalSwipe,
                   
@@ -587,7 +583,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 20),
 
-              // 🌟 5. ส่วนแสดงข้อมูลประวัติที่คลิกเลือกจากปฏิทิน
               _buildEventList(),
 
               const SizedBox(height: 40),
@@ -598,7 +593,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🌟 6. สร้าง Widget สำหรับแสดงรายการบริจาคใตัแผนที่
   Widget _buildEventList() {
     final selectedEvents = _getEventsForDay(_selectedDay ?? _focusedDay);
 
@@ -615,7 +609,6 @@ class _HomeScreenState extends State<HomeScreen> {
       children: selectedEvents.map((event) {
         String foundationName = event['foundation_name'] ?? 'ไม่ระบุชื่อมูลนิธิ';
         
-        // จัดการเรื่องสิ่งของ
         List<dynamic> categories = event['selected_categories'] ?? [];
         String others = event['others_text'] ?? '';
         List<String> allItems = categories.map((e) => e.toString().replaceAll('\n', '')).toList();
@@ -630,7 +623,6 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
 
-        // จัดการเรื่องสถานะ (Status)
         String statusRaw = event['status'] ?? 'pending';
         String statusText = 'กำลังดำเนินการ';
         Color statusColor = Colors.orange;
@@ -682,14 +674,13 @@ class _HomeScreenState extends State<HomeScreen> {
       }).toList(),
     );
   }
- // 🌟 ฟังก์ชันแสดงหน้าต่างแจ้งเตือนแบบปัดลบได้
+
   void _showNotificationsSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        // 🌟 ใช้ StatefulBuilder เพื่อให้หน้าต่างนี้อัปเดตตัวเองได้เวลาเราปัดลบ
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setSheetState) {
             return Container(
@@ -705,10 +696,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 16),
                   const Text('การแจ้งเตือน', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  const Text('ปัดไปทางซ้ายเพื่อลบการแจ้งเตือน', style: TextStyle(fontSize: 12, color: Colors.grey)), // คำแนะนำให้ผู้ใช้
+                  const Text('ปัดไปทางซ้ายเพื่อลบการแจ้งเตือน', style: TextStyle(fontSize: 12, color: Colors.grey)), 
                   const Divider(height: 20),
                   
-                  // รายการแจ้งเตือน
                   Expanded(
                     child: _recentNotifications.isEmpty
                         ? const Center(child: Text('ไม่มีการแจ้งเตือนใหม่', style: TextStyle(color: Colors.grey)))
@@ -718,7 +708,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             itemBuilder: (context, index) {
                               final notif = _recentNotifications[index];
                               
-                              // 🌟 ใช้ notification_type แทน status เดิม
                               final notifType = notif['notification_type'] ?? 'pending';
                               
                               String title = '';
@@ -726,7 +715,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               IconData icon = Icons.check_circle;
                               Color iconColor = Colors.green;
 
-                              // 🌟 กำหนดข้อความตาม "ประเภทของร่างแจ้งเตือน"
                               if (notifType == 'completed') {
                                 title = 'บริจาคเสร็จสิ้น!';
                                 body = 'มูลนิธิได้รับสิ่งของบริจาคของคุณแล้ว ขอบคุณที่ร่วมแบ่งปันสิ่งดีๆ ครับ';
@@ -745,7 +733,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               }
 
                               return Dismissible(
-                                // 🌟 สำคัญมาก! ต้องเอา ID มารวมกับ Type เพื่อให้ Key ไม่ซ้ำกันตอนแยกร่าง
                                 key: Key('${notif['booking_id']}_$notifType'), 
                                 direction: DismissDirection.endToStart, 
                                 background: Container(
@@ -755,24 +742,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: const Icon(Icons.delete, color: Colors.white, size: 30),
                                 ),
                                 onDismissed: (direction) {
-                                 // 1. 🌟 ใช้คำสั่ง arrayUnion เพื่อ "เพิ่ม" สถานะลงไปในกระเป๋า ไม่ให้ทับของเดิม
                                   if (notif['booking_id'] != null) {
                                     FirebaseFirestore.instance
                                         .collection('DonationBookings')
                                         .doc(notif['booking_id'])
                                         .update({
-                                          'dismissed_statuses': FieldValue.arrayUnion([notifType]), // 🌟 เพิ่มร่างที่โดนลบลงไปในประวัติ
-                                          'dismissed_status': notifType, // กันเหนียวให้ระบบเก่า
-                                          'is_notification_dismissed': true, // กันเหนียวให้ระบบเก่า
+                                          'dismissed_statuses': FieldValue.arrayUnion([notifType]), 
+                                          'dismissed_status': notifType, 
+                                          'is_notification_dismissed': true, 
                                         });
                                   }
 
-                                  // 2. ซ่อนออกจากลิสต์บนหน้าจอทันที
                                   setSheetState(() {
                                     _recentNotifications.removeAt(index);
                                   });
                                   
-                                  // 3. สั่งให้ตัวเลข Badge ตรงระฆังอัปเดตตาม
                                   setState(() {});
                                 },
                                 child: ListTile(

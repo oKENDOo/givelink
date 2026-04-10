@@ -165,42 +165,16 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
       if (mounted) {
         setState(() { isSaving = false; });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            elevation: 10,
-            behavior: SnackBarBehavior.floating, 
-            backgroundColor: Colors.green.shade600, 
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), 
-            margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height - 200, 
-              left: 20,
-              right: 20,
-            ),
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 32),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('ทำรายการสำเร็จ!', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                      Text('ระบบได้บันทึกการจองบริจาคของคุณแล้ว', style: TextStyle(fontSize: 13, color: Colors.white)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            duration: const Duration(seconds: 3), 
-          ),
-        );
-
+        // 🌟 ลบ SnackBar แจ้งเตือนสีเขียวออกทั้งหมด! 
+        // เพื่อลดภาระการวาดหน้าจอของมือถือรุ่นเก่า ป้องกัน UI Thread ล็อคตาย
+        
+        // สลับไปหน้า Success ทันที
         context.pushReplacement('/donation_success');
       }
 
     } catch (e) {
       debugPrint('Error saving booking: $e');
+      // ... (โค้ดส่วนดักจับ Error ปล่อยไว้เหมือนเดิมครับ)
       if (mounted) {
         setState(() { isSaving = false; });
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่')));

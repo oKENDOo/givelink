@@ -176,7 +176,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
             backgroundColor: Colors.red.shade600,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height - 200, 
+              bottom: MediaQuery.of(context).size.height - 300, 
               left: 20,
               right: 20,
             ),

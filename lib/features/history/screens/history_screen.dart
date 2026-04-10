@@ -51,9 +51,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
             labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
             tabs: [
-              Tab(text: 'กำลังดำเนินการ'),
+              Tab(text: 'ดำเนินการ'),
               Tab(text: 'เสร็จสิ้น'),
-              Tab(text: 'ยกเลิก/ล้มเหลว'),
+              Tab(text: 'ยกเลิก'),
             ],
           ),
         ),

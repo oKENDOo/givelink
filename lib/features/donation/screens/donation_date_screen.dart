@@ -152,6 +152,9 @@ class _DonationDateScreenState extends State<DonationDateScreen> {
                       ),
                       padding: const EdgeInsets.all(8),
                      child: TableCalendar(
+                        // 🌟 แก้ปัญหาตัวหนังสือ Sun Mon โดนตัดครึ่ง โดยการเพิ่มความสูงของแถว
+                        daysOfWeekHeight: 30,
+
                         // 🌟 เพิ่มบรรทัดนี้ เพื่อให้ปฏิทินรับแค่การปัดซ้ายขวา แล้วปล่อยให้ปัดหน้าจอขึ้นลงได้
                         availableGestures: AvailableGestures.horizontalSwipe,
 
