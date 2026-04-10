@@ -10,7 +10,6 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // 🌟 ลบ _nameController ออกไปแล้ว เหลือแค่ 4 ช่อง
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -18,9 +17,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _isLoading = false; 
 
-  // ฟังก์ชันสมัครสมาชิก
-// 🌟 ฟังก์ชันสมัครสมาชิก
+  // 🌟 ฟังก์ชันสมัครสมาชิก
   Future<void> _signUp() async {
+    // 🌟 1. ดักจับกรณีผู้ใช้ยังไม่กรอกข้อมูลให้ครบถ้วน
+    if (_usernameController.text.trim().isEmpty || 
+        _emailController.text.trim().isEmpty || 
+        _passwordController.text.trim().isEmpty || 
+        _confirmPasswordController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบถ้วน')));
+      return; // หยุดการทำงาน ไม่ส่งไป Firebase
+    }
+
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('รหัสผ่านไม่ตรงกัน!')));
       return;
@@ -29,13 +36,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. สร้างบัญชีด้วยอีเมลและรหัสผ่าน และเก็บข้อมูล user ไว้ในตัวแปร userCredential
+      // สร้างบัญชีด้วยอีเมลและรหัสผ่าน
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
       
-      // 🌟 2. จุดสำคัญ! สั่งให้อัปเดต "ชื่อผู้ใช้" (displayName) เข้าไปในบัญชีที่เพิ่งสร้าง
+      // อัปเดต "ชื่อผู้ใช้" (displayName) เข้าไปในบัญชีที่เพิ่งสร้าง
       await userCredential.user?.updateDisplayName(_usernameController.text.trim());
       
       if (mounted) {
@@ -44,7 +51,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: ${e.message}')));
+        // 🌟 แปลง Error ยาวๆ ของ Firebase ให้เป็นข้อความภาษาไทยสั้นๆ เข้าใจง่าย
+        String errorMessage = 'เกิดข้อผิดพลาดในการลงทะเบียน กรุณาลองใหม่';
+        if (e.code == 'email-already-in-use') {
+          errorMessage = 'อีเมลนี้มีผู้ใช้งานแล้ว';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง';
+        } else if (e.code == 'weak-password') {
+          errorMessage = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -53,7 +70,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    // 🌟 ลบ _nameController.dispose() ออกไปแล้ว
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -64,7 +80,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     const Color primaryBlue = Color(0xFF64B5C7);
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    
+    // 🌟 2. ดึงค่าความหนาของ Navbar ด้านล่างสุดของมือถือแต่ละเครื่อง
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -99,8 +117,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
               ),
               child: SingleChildScrollView(
-                physics: bottomInset > 0 ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40), 
+                // 🌟 3. เปลี่ยนให้เลื่อนจอขึ้นลงได้เสมอ จะได้ใช้นิ้วปัดดูปุ่มได้
+                physics: const AlwaysScrollableScrollPhysics(),
+                // 🌟 4. ดันระยะด้านล่างสุดเพิ่มขึ้น (บวกความหนาของ Navbar มือถือเข้าไป)
+                padding: EdgeInsets.only(left: 30, right: 30, top: 40, bottom: 40 + bottomPadding), 
                 child: Column(
                   children: [
                     _buildTextField(hint: 'ชื่อผู้ใช้', controller: _usernameController, maxLength: 12),
@@ -138,17 +158,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-// 🌟 เพิ่ม int? maxLength เข้ามารับค่า
   Widget _buildTextField({required String hint, bool isPassword = false, required TextEditingController controller, int? maxLength}) {
     return TextFormField(
       controller: controller,
       obscureText: isPassword,
-      maxLength: maxLength, // 🌟 จำกัดความยาว
+      maxLength: maxLength, 
       decoration: InputDecoration(
         hintText: hint,
         filled: true,
         fillColor: Colors.white,
-        counterText: '', // 🌟 ซ่อนตัวเลข 0/12 ด้านล่าง เพื่อความสวยงาม
+        counterText: '', 
         contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30), 
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(50),
@@ -158,6 +177,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-
-//firebase (Email+Username+Password)+ ImgBB(Proflie Pic)
-//รหัสประจำตัวผู้ใช้ (UID) //รหัสผ่าน (Password)// user.email // user.displayName // user.photoURL 
