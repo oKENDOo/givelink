@@ -369,7 +369,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
                     // 6. ส่วนแสดงวันที่และเวลา
                     Center(
                       child: Text(
-                        'ทำรายการเมื่อ: ${_formatThaiDateTime(widget.bookingData['created_at'] ?? widget.bookingData['timestamp'])}',
+                        'จองเมื่อ: ${_formatThaiDateTime(widget.bookingData['created_at'] ?? widget.bookingData['timestamp'])}',
                         style: const TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.w500),
                       ),
                     ),
