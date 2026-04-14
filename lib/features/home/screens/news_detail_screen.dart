@@ -52,7 +52,7 @@ class NewsDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 2. หมวดหมู่/หัวข้อข่าว
+                  // 2. กล่องสีฟ้าเล็ก (🌟 แก้ให้โชว์ชื่อมูลนิธิแทน)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
@@ -60,15 +60,15 @@ class NewsDetailScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      title,
+                      foundation, // 🌟 สลับตัวแปรเป็น foundation ตรงนี้
                       style: const TextStyle(color: Color(0xFF64B5C7), fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. ชื่อมูลนิธิ
+                  // 3. ตัวหนังสือสีดำขนาดใหญ่ (🌟 แก้ให้โชว์หัวข้อข่าวแทน)
                   Text(
-                    foundation,
+                    title, // 🌟 สลับตัวแปรเป็น title ตรงนี้
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
@@ -95,16 +95,14 @@ class NewsDetailScreen extends StatelessWidget {
                   
                   const SizedBox(height: 40),
                   
-                  // 6. ปุ่มแชร์หรือปุ่มบริจาคด่วน
+                  // 6. ปุ่มแชร์
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      // 🌟 1. เติมคำว่า async ตรงนี้
                       onPressed: () async { 
                         String shareText = 'โครงการดีๆ จาก $foundation!\n\nเรื่อง: $title\n\nมาร่วมทำความดีด้วยกันผ่านแอป GiveLink นะครับ 💙';
                         
-                        // 🌟 2. ใส่ try-catch และ await ดักไว้
                         try {
                           await Share.share(shareText);
                         } catch (e) {

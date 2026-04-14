@@ -174,7 +174,7 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
 
     } catch (e) {
       debugPrint('Error saving booking: $e');
-      // ... (โค้ดส่วนดักจับ Error ปล่อยไว้เหมือนเดิมครับ)
+      // ... (โค้ดส่วนดักจับ Error ปล่อยไว้เหมือนเดิม)
       if (mounted) {
         setState(() { isSaving = false; });
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่')));
