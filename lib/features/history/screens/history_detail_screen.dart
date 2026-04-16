@@ -204,6 +204,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
   }
 
   // 🌟 ฟังก์ชันแสดงรูปภาพเต็มหน้าจอ (สำหรับภาพจากอินเทอร์เน็ต)
+// 🌟 ฟังก์ชันแสดงรูปภาพเต็มหน้าจอ 
   void _showFullScreenImage(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
@@ -213,13 +214,22 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
           body: Stack(
             children: [
               Center(
-                child: InteractiveViewer( // 🌟 ทำให้ใช้นิ้วซูมภาพได้
+                child: InteractiveViewer( 
                   panEnabled: true, 
                   minScale: 0.5,
                   maxScale: 4.0,
                   child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain, // แสดงภาพเต็มจอโดยไม่ถูกตัด
+                    imageUrl.trim(), // 🌟 ป้องกัน URL มีช่องว่างแอบแฝง
+                    fit: BoxFit.contain, 
+                    cacheWidth: 1080, // 🌟 บังคับลดขนาดตอนกางเต็มจอไม่ให้เกิน 1080px ป้องกัน Emulator ค้าง
+                    errorBuilder: (context, error, stackTrace) => const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.broken_image, color: Colors.white54, size: 80),
+                        SizedBox(height: 16),
+                        Text('ไม่สามารถโหลดรูปภาพได้', style: TextStyle(color: Colors.white, fontSize: 16)),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -230,7 +240,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
                     padding: const EdgeInsets.all(16.0),
                     child: IconButton(
                       icon: const Icon(Icons.close, color: Colors.white, size: 36),
-                      onPressed: () => Navigator.of(context).pop(), // กดปิดรูป
+                      onPressed: () => Navigator.of(context).pop(), 
                     ),
                   ),
                 ),
@@ -340,22 +350,32 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: imageUrls.length,
                         itemBuilder: (context, index) {
-                          // 🌟 หุ้มด้วย GestureDetector เพื่อให้กดดูรูปใหญ่ได้
+                          // 🌟 ดึง URL ออกมาและใช้ trim() ตัดขยะทิ้ง
+                          final String imageUrl = imageUrls[index].toString().trim(); 
+
                           return GestureDetector(
-                            onTap: () => _showFullScreenImage(context, imageUrls[index].toString()),
+                            onTap: () => _showFullScreenImage(context, imageUrl),
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 16.0),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: Image.network(
-                                  imageUrls[index].toString(),
+                                  imageUrl,
                                   width: double.infinity,
                                   height: 250,
                                   fit: BoxFit.cover,
+                                  cacheWidth: 800, // 🌟 สำคัญ! ลดความละเอียดรูปย่อเหลือแค่ 800px ประหยัด RAM ขั้นสุด
                                   errorBuilder: (context, error, stackTrace) => Container(
                                     height: 250,
                                     color: Colors.grey.shade200,
-                                    child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                                        SizedBox(height: 8),
+                                        Text('โหลดรูปภาพไม่สำเร็จ', style: TextStyle(color: Colors.grey)),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

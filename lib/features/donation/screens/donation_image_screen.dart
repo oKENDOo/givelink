@@ -36,13 +36,34 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
     try {
       final List<XFile> pickedFiles = await _picker.pickMultiImage();
       if (pickedFiles.isNotEmpty) {
+        bool hasInvalidFile = false; // 🌟 ตัวแปรเช็กว่ามีไฟล์ผิดประเภทหลุดมาไหม
+
         setState(() {
           for (var xfile in pickedFiles) {
-            if (_selectedImages.length < 5) {
-              _selectedImages.add(File(xfile.path));
+            // 🌟 1. ดึงนามสกุลไฟล์ออกมาเช็ก (แปลงเป็นตัวเล็กทั้งหมดป้องกันปัญหาตัวพิมพ์ใหญ่-เล็ก)
+            String extension = xfile.path.split('.').last.toLowerCase();
+            
+            // 🌟 2. อนุญาตแค่ jpg, jpeg, png เท่านั้น
+            if (extension == 'jpg' || extension == 'jpeg' || extension == 'png') {
+              if (_selectedImages.length < 5) {
+                _selectedImages.add(File(xfile.path));
+              }
+            } else {
+              hasInvalidFile = true; // พบไฟล์ที่ไม่รองรับ
             }
           }
         });
+
+        // 🌟 3. ถ้าผู้ใช้เผลอเลือกไฟล์ avif/heic มา ให้เด้งเตือนสีแดง
+        if (hasInvalidFile) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ระบบรองรับเฉพาะไฟล์รูปภาพ .JPG และ .PNG เท่านั้น'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint("Error picking images: $e");
