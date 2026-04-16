@@ -23,13 +23,6 @@
 - 🔔 **Smart Notifications:** ระบบแจ้งเตือนอัจฉริยะรองรับการปัดเพื่อลบ (Swipe-to-Dismiss)
 - 🔒 **Secure Authentication:** ระบบจัดการบัญชีผู้ใช้และระบบยืนยันตัวตนซ้ำ (Re-Authentication) เพื่อความปลอดภัยสูงสุด
 
-## 📱 Screenshots (ภาพหน้าจอแอปพลิเคชัน)
-| หน้าหลัก (Home) | ค้นหามูลนิธิ (Near Me) | จองการบริจาค (Booking) | ประวัติ (History) |
-|:---:|:---:|:---:|:---:|
-| <img src="[ใส่ลิงก์รูปหน้าHome]" width="200"> | <img src="[ใส่ลิงก์รูปหน้ามูลนิธิ]" width="200"> | <img src="[ใส่ลิงก์รูปหน้าอัปโหลดรูป]" width="200"> | <img src="[ใส่ลิงก์รูปหน้าประวัติ]" width="200"> |
-
-> **Note:** สามารถเพิ่มรูปภาพ Screenshot จริงของแอปโดยนำภาพไปฝากไว้ในโฟลเดอร์ `assets` หรือฝากลิงก์ไว้ใน GitHub แล้วนำ URL มาใส่แทน `[ใส่ลิงก์รูป...]`
-
 ## 🛠 Tech Stack (เทคโนโลยีที่ใช้พัฒนา)
 * **Frontend:** Flutter Framework (Dart)
 * **Backend / Database:** Firebase Authentication, Cloud Firestore
