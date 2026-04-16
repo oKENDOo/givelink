@@ -240,7 +240,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Container(
             decoration: BoxDecoration(
             ),
-            // 🌟 ✅ แทนที่ Icon ด้วย Image.asset ตรงนี้ครับ
+            // 🌟 ✅ แทนที่ Icon ด้วย Image.asset 
             child: Image.asset(
               'assets/images/logo_crop.png',
               width: 120, // กำหนดขนาดให้เท่ากับไอคอนเดิม

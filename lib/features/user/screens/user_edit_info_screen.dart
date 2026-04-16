@@ -209,7 +209,7 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
                     });
 
                     scaffoldMessenger.showSnackBar(
-                      const SnackBar(content: Text('กำลังบันทึกรูปโปรไฟล์เบื้องหลัง... สามารถใช้งานแอปต่อได้เลยครับ')),
+                      const SnackBar(content: Text('กำลังบันทึกรูปโปรไฟล์เบื้องหลัง... สามารถใช้งานแอปต่อไปได้')),
                     );
 
                     _uploadToImgBB(File(image.path)).then((imageUrl) async {
@@ -398,7 +398,7 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('ส่งลิงก์ยืนยันไปที่อีเมลใหม่แล้ว!\nกรุณาเช็ค Inbox และกดลิงก์เพื่อยืนยัน อีเมลจึงจะถูกเปลี่ยนครับ'),
+            content: Text('ส่งลิงก์ยืนยันไปที่อีเมลใหม่แล้ว!\nกรุณาเช็ค Inbox และกดลิงก์เพื่อยืนยัน อีเมลจึงจะถูกเปลี่ยน'),
             backgroundColor: Colors.green, 
             duration: Duration(seconds: 5), 
           )
@@ -526,7 +526,7 @@ class _UserEditInfoScreenState extends State<UserEditInfoScreen> with WidgetsBin
                     Navigator.of(context, rootNavigator: true).pop(); 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('ยืนยันตัวตนสำเร็จ!\nส่งลิงก์ยืนยันไปที่อีเมลใหม่แล้ว กรุณาเช็ค Inbox ครับ'),
+                        content: Text('ยืนยันตัวตนสำเร็จ!\nส่งลิงก์ยืนยันไปที่อีเมลใหม่แล้ว กรุณาเช็ค Inbox'),
                         backgroundColor: Colors.green, 
                         duration: Duration(seconds: 5), 
                       )

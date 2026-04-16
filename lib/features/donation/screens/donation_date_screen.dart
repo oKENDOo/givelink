@@ -221,7 +221,7 @@ class _DonationDateScreenState extends State<DonationDateScreen> {
                         onPressed: () {
                           if (_selectedDay == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('กรุณาเลือกวันที่ต้องการไปบริจาคก่อนครับ')),
+                              const SnackBar(content: Text('กรุณาเลือกวันที่ต้องการไปบริจาค')),
                             );
                             return;
                           }

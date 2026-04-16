@@ -29,7 +29,7 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
 
   Future<void> _pickImages() async {
     if (_selectedImages.length >= 5) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('อัปโหลดได้สูงสุด 5 รูปครับ')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('อัปโหลดรูปภาพได้สูงสุด 5 รูป')));
       return;
     }
 
@@ -328,7 +328,7 @@ class _DonationImageScreenState extends State<DonationImageScreen> {
                       child: ElevatedButton(
                         onPressed: () {
                           if (_selectedImages.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณาอัปโหลดรูปภาพสิ่งของอย่างน้อย 1 รูปครับ')));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณาอัปโหลดรูปภาพสิ่งของอย่างน้อย 1 รูป')));
                             return;
                           }
                           

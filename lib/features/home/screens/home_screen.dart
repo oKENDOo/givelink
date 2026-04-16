@@ -717,7 +717,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                               if (notifType == 'completed') {
                                 title = 'บริจาคเสร็จสิ้น!';
-                                body = 'มูลนิธิได้รับสิ่งของบริจาคของคุณแล้ว ขอบคุณที่ร่วมแบ่งปันสิ่งดีๆ ครับ';
+                                body = 'มูลนิธิได้รับสิ่งของบริจาคของคุณแล้ว ขอบคุณที่ร่วมแบ่งปันสิ่งดีๆ';
                                 icon = Icons.volunteer_activism;
                                 iconColor = primaryBlue;
                               } else if (notifType == 'cancelled') {

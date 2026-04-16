@@ -50,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (e.code == 'invalid-email') {
         errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง (เช่น ลืมใส่ @ หรือสะกดผิด)';
       } else if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        // ปัจจุบัน Firebase จะรวบ error รหัสผิด/ไม่มีเมล เป็น invalid-credential เพื่อความปลอดภัยครับ
+        // ปัจจุบัน Firebase จะรวบ error รหัสผิด/ไม่มีเมล เป็น invalid-credential เพื่อความปลอดภัย
         errorMessage = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
       } else if (e.code == 'too-many-requests') {
         errorMessage = 'เข้าสู่ระบบผิดพลาดหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่';

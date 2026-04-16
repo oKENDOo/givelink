@@ -141,7 +141,7 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
         if (mounted) {
           setState(() { isSaving = false; });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('อัปโหลดรูปภาพไม่สำเร็จ (อาจใช้เวลานานเกินไป) กรุณาลองใหม่ครับ'), backgroundColor: Colors.red),
+            const SnackBar(content: Text('อัปโหลดรูปภาพไม่สำเร็จ (อาจใช้เวลานานเกินไป) กรุณาลองใหม่อีกครั้ง'), backgroundColor: Colors.red),
           );
         }
         return; // 🛑 หยุดการบันทึก ไม่ให้ไปต่อ!
@@ -177,7 +177,7 @@ class _DonationSummaryScreenState extends State<DonationSummaryScreen> {
       // ... (โค้ดส่วนดักจับ Error ปล่อยไว้เหมือนเดิม)
       if (mounted) {
         setState(() { isSaving = false; });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกคร้ง')));
       }
     }
   }

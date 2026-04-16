@@ -189,7 +189,7 @@ class _DonationSelectionScreenState extends State<DonationSelectionScreen> {
                          // 🌟 ตรวจสอบว่าผู้ใช้เลือกอะไรบ้างหรือยัง
                           if (_selectedCategories.isEmpty && _othersController.text.trim().isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('กรุณาเลือกสิ่งของหรือระบุในช่องอื่นๆ ก่อนไปต่อครับ')),
+                              const SnackBar(content: Text('กรุณาเลือกสิ่งของหรือระบุในช่องอื่นๆ ก่อนไปต่อ')),
                             );
                             return; // หยุดการทำงานถ้ายังไม่เลือก
                           }

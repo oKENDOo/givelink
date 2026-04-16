@@ -42,7 +42,6 @@ class _MapScreenState extends State<MapScreen> {
     FirebaseFirestore.instance.collection('Foundations').snapshots().listen((snapshot) {
       if (mounted) {
         setState(() {
-          // ลบ as Map<String, dynamic> ออกไปแล้วครับ
           _allFoundations = snapshot.docs.map((doc) => doc.data()).toList();
         });
       }
