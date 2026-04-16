@@ -242,7 +242,7 @@ class _DonationFoundationScreenState extends State<DonationFoundationScreen> {
                               child: Text(
                                 _searchQuery.isNotEmpty 
                                   ? 'ไม่พบชื่อมูลนิธิ "${_searchController.text}"\nที่รับบริจาคสิ่งของที่คุณเลือก' 
-                                  : 'ยังไม่มีมูลนิธิเปิดรับของชนิดนี้ในเวลานี้',
+                                  : 'ยังไม่มีมูลนิธิเปิดรับสิ่งของชนิดนี้ในเวลานี้',
                                 style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
                                 textAlign: TextAlign.center,
                               ),
